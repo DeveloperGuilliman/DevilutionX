@@ -29,19 +29,60 @@ enum class HeroClass : uint8_t {
 	LAST = Barbarian,
 };
 
+enum class PlayerClassAvailabilityFlag : uint8_t {
+	// clang-format off
+	Spawn = 0,
+	Retail = 1 << 0,
+	Hellfire = 1 << 1,
+	BardTest = 1 << 2,
+	BarbarianTest = 1 << 3,
+
+	Last = BarbarianTest
+	// clang-format on
+};
+use_enum_as_flags(PlayerClassAvailabilityFlag);
+
 enum class PlayerClassFlag : uint8_t {
 	// clang-format off
 	None = 0,
-	CriticalStrike = 1 << 0,
-	DualWield = 1 << 1,
-	IronSkin = 1 << 2,
-	NaturalResistance = 1 << 3,
-	TrapSense = 1 << 4,
-
-	Last = TrapSense
+	DualWield = 1 << 0,
+	TrapSense = 1 << 1,
+	WieldTwoHandedSwordMaceShield = 1 << 2,
+	
+	Last = WieldTwoHandedSwordMaceShield
 	// clang-format on
 };
 use_enum_as_flags(PlayerClassFlag);
+
+enum class PlayerAttackFlag : uint8_t {
+	// clang-format off
+	None = 0,
+	CriticalStrike = 1 << 0,
+	StaffCleave = 1 << 1,
+	DualSwordCleave = 1 << 2,
+	TwoHandedAxeMaceSwordCleave = 1 << 3,
+	ExtraMeleeArmorPiercing = 1 << 4,
+	ExtraArrowPhysicalDamage = 1 << 5,
+	MartialArts = 1 << 6,
+	
+	Last = MartialArts
+	// clang-format on
+};
+use_enum_as_flags(PlayerAttackFlag);
+
+enum class PlayerDefenseFlag : uint8_t {
+	// clang-format off
+	None = 0,
+	IronSkin = 1 << 1,
+	NaturalResistance = 1 << 2,
+	StaffBlock = 1 << 3,
+	OneHandBlock = 1 << 4,
+	LightArmorExpert = 1 << 5,
+	
+	Last = LightArmorExpert
+	// clang-format on
+};
+use_enum_as_flags(PlayerDefenseFlag);
 
 struct PlayerData {
 	/* Class Name */
@@ -57,6 +98,8 @@ struct PlayerData {
 struct ClassAttributes {
 	/* Class Flags */
 	PlayerClassFlag classFlags;
+	/* Class Availability Flags */
+	PlayerClassAvailabilityFlag classAvailabilityFlags;
 	/* Class Starting Strength Stat */
 	uint8_t baseStr;
 	/* Class Starting Magic Stat */
@@ -106,6 +149,34 @@ struct ClassAttributes {
 const ClassAttributes &GetClassAttributes(HeroClass playerClass);
 
 struct PlayerCombatData {
+	/* Combat Special Attack Flags */
+	PlayerAttackFlag attackFlags;
+	/* Combat Special Defense Flags */
+	PlayerDefenseFlag defenseFlags;
+	/* Melee bonus armor piercing */
+	int16_t meleeArmorPiercingBonus;
+	/* Bow damage to monsters bonus multiplier */
+	int16_t bowDamageMod;
+	/* Arrow velocity bonus by level multiplier */
+	int16_t arrowVelocityBonus;
+	/* Normal Light Armor AC bonus by level multiplier */
+	int16_t normalLightArmorAC;
+	/* Magic Light Armor AC bonus by level multiplier */
+	int16_t magicLightArmorAC;
+	/* Unique Light Armor AC bonus by level multiplier */
+	int16_t uniqueLightArmorAC;
+	/* Normal Medium Armor AC bonus by level multiplier */
+	int16_t normalMediumArmorAC;
+	/* Magic Medium Armor AC bonus by level multiplier */
+	int16_t magicMediumArmorAC;
+	/* Unique Medium Armor AC bonus by level multiplier */
+	int16_t uniqueMediumArmorAC;
+	/* Normal Heavy Armor AC bonus by level multiplier */
+	int16_t normalHeavyArmorAC;
+	/* Magic Heavy Armor AC bonus by level multiplier */
+	int16_t magicHeavyArmorAC;
+	/* Unique Heavy Armor AC bonus by level multiplier */
+	int16_t uniqueHeavyArmorAC;
 	/* Class starting chance to Block (used as a %) */
 	uint8_t baseToBlock;
 	/* Class starting chance to hit when using melee attacks (used as a %) */
@@ -254,4 +325,22 @@ template <>
 struct magic_enum::customize::enum_range<devilution::PlayerClassFlag> {
 	static constexpr uint8_t min = static_cast<uint64_t>(devilution::PlayerClassFlag::None);
 	static constexpr uint8_t max = static_cast<uint64_t>(devilution::PlayerClassFlag::Last);
+};
+
+template <>
+struct magic_enum::customize::enum_range<devilution::PlayerClassAvailabilityFlag> {
+	static constexpr uint8_t min = static_cast<uint64_t>(devilution::PlayerClassAvailabilityFlag::Spawn);
+	static constexpr uint8_t max = static_cast<uint64_t>(devilution::PlayerClassAvailabilityFlag::Last);
+};
+
+template <>
+struct magic_enum::customize::enum_range<devilution::PlayerAttackFlag> {
+	static constexpr uint8_t min = static_cast<uint64_t>(devilution::PlayerAttackFlag::None);
+	static constexpr uint8_t max = static_cast<uint64_t>(devilution::PlayerAttackFlag::Last);
+};
+
+template <>
+struct magic_enum::customize::enum_range<devilution::PlayerDefenseFlag> {
+	static constexpr uint8_t min = static_cast<uint64_t>(devilution::PlayerDefenseFlag::None);
+	static constexpr uint8_t max = static_cast<uint64_t>(devilution::PlayerDefenseFlag::Last);
 };

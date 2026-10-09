@@ -18,6 +18,8 @@
 #include "gamemenu.h"
 #include "inv.h"
 #include "missiles.h"
+#include "utils/log.hpp"
+
 
 namespace devilution {
 
@@ -169,6 +171,9 @@ void ConsumeSpell(Player &player, SpellID sn)
 	}
 	if (sn == SpellID::BoneSpirit) {
 		ApplyPlrDamage(DamageType::Physical, player, 6);
+	}
+	if (sn == SpellID::DoomSerpents) {
+		ApplyPlrDamage(DamageType::Physical, player, 15);
 	}
 }
 
