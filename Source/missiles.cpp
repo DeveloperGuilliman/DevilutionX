@@ -2449,8 +2449,8 @@ void AddGolem(Missile &missile, AddMissileParameter &parameter) {
 	AddPet(missile, parameter, MT_GOLEM);
 }
 
-void AddGolem2(Missile &missile, AddMissileParameter &parameter) {
-	LogInfo("PET AddGolem2()| Skeleton spell");
+void AddSummonedSkeleton(Missile &missile, AddMissileParameter &parameter) {
+	LogInfo("PET AddSummonedSkeleton()| Skeleton spell");
 	AddPet(missile, parameter, MT_GOLEM2);
 }
 
