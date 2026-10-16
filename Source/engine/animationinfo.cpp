@@ -66,13 +66,13 @@ uint8_t AnimationInfo::getAnimationProgress() const
 
 	if (relevantFramesForDistributing_ <= 0) {
 		if (ticksPerFrame <= 0) {
-			Log("getAnimationProgress: Invalid ticksPerFrame {}", ticksPerFrame);
+			Log("getAnimationProgress: Invalid ticksPerFrame {}", ticksPerFrame.raw() / 128.0);
 			return 0;
 		}
 		// This logic is used if animation distribution is not active (see getFrameToUseForRendering).
 		// In this case the variables calculated with animation distribution are not initialized and we have to calculate them on the fly with the given information.
-		ticksSinceSequenceStarted = TicksFixed::fromInt((currentFrame * ticksPerFrame) + tickCounterOfCurrentFrame);
-		tickModifier = RateFixed(RateFixed::fromInt(1) / ticksPerFrame);
+		ticksSinceSequenceStarted = static_cast<TicksFixed>(currentFrame * ticksPerFrame + tickCounterOfCurrentFrame);
+		tickModifier = RateFixed::fromRaw(RateFixed::fromInt(1).raw() / ticksPerFrame.raw());
 	}
 
 	const FixedPoint<int, 7> totalTicksForCurrentAnimationSequence = getProgressToNextGameTick() + ticksSinceSequenceStarted;
@@ -84,7 +84,7 @@ uint8_t AnimationInfo::getAnimationProgress() const
 	return static_cast<uint8_t>(animationFraction);
 }
 
-void AnimationInfo::setNewAnimation(OptionalClxSpriteList celSprite, int8_t numberOfFrames, int8_t ticksPerFrame, AnimationDistributionFlags flags /*= AnimationDistributionFlags::None*/, int8_t numSkippedFrames /*= 0*/, int8_t distributeFramesBeforeFrame /*= 0*/, uint8_t previewShownGameTickFragments /*= 0*/)
+void AnimationInfo::setNewAnimation(OptionalClxSpriteList celSprite, int8_t numberOfFrames, Fixed09_7 ticksPerFrame, AnimationDistributionFlags flags /*= AnimationDistributionFlags::None*/, int8_t numSkippedFrames /*= 0*/, int8_t distributeFramesBeforeFrame /*= 0*/, uint8_t previewShownGameTickFragments /*= 0*/)
 {
 	if ((flags & AnimationDistributionFlags::RepeatedAction) == AnimationDistributionFlags::RepeatedAction && distributeFramesBeforeFrame != 0 && this->numberOfFrames == numberOfFrames && currentFrame + 1 >= distributeFramesBeforeFrame && currentFrame != this->numberOfFrames - 1) {
 		// We showed the same Animation (for example a melee attack) before but truncated the Animation.
@@ -95,14 +95,14 @@ void AnimationInfo::setNewAnimation(OptionalClxSpriteList celSprite, int8_t numb
 	}
 
 	if (ticksPerFrame <= 0) {
-		Log("setNewAnimation: Invalid ticksPerFrame {}", ticksPerFrame);
-		ticksPerFrame = 1;
+		Log("setNewAnimation: Invalid ticksPerFrame {}", ticksPerFrame.raw() / 128.0);
+		ticksPerFrame = Fixed09_7::fromInt(1);
 	}
 
 	this->sprites = celSprite;
 	this->numberOfFrames = numberOfFrames;
 	currentFrame = numSkippedFrames;
-	tickCounterOfCurrentFrame = 0;
+	tickCounterOfCurrentFrame = Fixed09_7::fromInt(0);
 	this->ticksPerFrame = ticksPerFrame;
 	ticksSinceSequenceStarted_ = TicksFixed::fromInt(0);
 	relevantFramesForDistributing_ = 0;
@@ -121,17 +121,17 @@ void AnimationInfo::setNewAnimation(OptionalClxSpriteList celSprite, int8_t numb
 		}
 
 		// Game ticks that will be adjusted for the skipped Frames/game ticks
-		int32_t relevantAnimationTicksForDistribution = relevantAnimationFramesForDistributing * ticksPerFrame;
+		FixedPoint<int, 7U> relevantAnimationTicksForDistribution = relevantAnimationFramesForDistributing * ticksPerFrame;
 
 		// How many game ticks will the Animation be really shown (skipped Frames and game ticks removed)
-		int32_t relevantAnimationTicksWithSkipping = relevantAnimationTicksForDistribution - (numSkippedFrames * ticksPerFrame);
+		FixedPoint<int, 7U> relevantAnimationTicksWithSkipping = relevantAnimationTicksForDistribution - (numSkippedFrames * ticksPerFrame);
 
 		if ((flags & AnimationDistributionFlags::ProcessAnimationPending) == AnimationDistributionFlags::ProcessAnimationPending) {
 			// If processAnimation will be called after setNewAnimation (in same game tick as setNewAnimation), we increment the Animation-Counter.
 			// If no delay is specified, this will result in complete skipped frame (see processAnimation).
 			// But if we have a delay specified, this would only result in a reduced time the first frame is shown (one skipped delay).
 			// Because of that, we only the remove one game tick from the time the Animation is shown
-			relevantAnimationTicksWithSkipping -= 1;
+			relevantAnimationTicksWithSkipping -= FixedPoint<int, 7U>::fromInt(1);
 			// The Animation Distribution Logic needs to account how many game ticks passed since the Animation started.
 			// Because processAnimation will increase this later (in same game tick as setNewAnimation), we correct this upfront.
 			// This also means Rendering should never happen with ticksSinceSequenceStarted_ < 0.
@@ -155,7 +155,7 @@ void AnimationInfo::setNewAnimation(OptionalClxSpriteList celSprite, int8_t numb
 			// in game tick 5 ProcessPlayer sees Frame = 3 and stops the animation.
 			// But Frame 3 is only shown 1 game tick and all other Frames are shown 2 game ticks.
 			// That's why we need to remove the Delay of the last Frame from the time (game ticks) the Animation is shown
-			relevantAnimationTicksWithSkipping -= (ticksPerFrame - 1);
+			relevantAnimationTicksWithSkipping -= (ticksPerFrame - Fixed09_7::fromInt(1));
 		}
 
 		// The truncated Frames from previous Animation will also be shown, so we also have to distribute them for the given time (game ticks)
@@ -166,17 +166,16 @@ void AnimationInfo::setNewAnimation(OptionalClxSpriteList celSprite, int8_t numb
 		// (numberOfFrames/ticksPerFrame are each at most int8_t), so an int32_t-backed FixedPoint
 		// here has enough headroom on its own; we use divideWithoutWidening below to avoid
 		// promoting to a 64-bit intermediate that this bounded ratio never needs.
-		using WideTicksFixed = FixedPoint<int32_t, 7>;
-		WideTicksFixed relevantTicksForDistribution = WideTicksFixed::fromInt(relevantAnimationTicksForDistribution);
-		WideTicksFixed relevantTicksWithSkipping = WideTicksFixed::fromInt(relevantAnimationTicksWithSkipping);
+		FixedPoint<int32_t, 7> relevantTicksForDistribution = relevantAnimationTicksForDistribution;
+		FixedPoint<int32_t, 7> relevantTicksWithSkipping = relevantAnimationTicksWithSkipping;
 
 		// The preview animation was shown some times (less than one game tick)
 		// So we overall have a longer time the animation is shown
 		ticksSinceSequenceStarted_ += TicksFixed::fromRaw(previewShownGameTickFragments);
-		relevantTicksWithSkipping += WideTicksFixed::fromRaw(previewShownGameTickFragments);
+		relevantTicksWithSkipping += FixedPoint<int32_t, 7>::fromRaw(previewShownGameTickFragments);
 
 		// if we skipped Frames we need to expand the game ticks to make one game tick for this Animation "faster"
-		WideTicksFixed tickModifier = WideTicksFixed::fromInt(0);
+		FixedPoint<int32_t, 7> tickModifier = FixedPoint<int32_t, 7>::fromInt(0);
 		if (relevantTicksWithSkipping != 0)
 			tickModifier = relevantTicksForDistribution.divideWithoutWidening(relevantTicksWithSkipping);
 
@@ -188,7 +187,7 @@ void AnimationInfo::setNewAnimation(OptionalClxSpriteList celSprite, int8_t numb
 	}
 }
 
-void AnimationInfo::changeAnimationData(OptionalClxSpriteList celSprite, int8_t numberOfFrames, int8_t ticksPerFrame)
+void AnimationInfo::changeAnimationData(OptionalClxSpriteList celSprite, int8_t numberOfFrames, Fixed09_7 ticksPerFrame)
 {
 	if (numberOfFrames != this->numberOfFrames || ticksPerFrame != this->ticksPerFrame) {
 		// Ensure that the currentFrame is still valid and that we disable ADL because the calculated values (for example tickModifier_) could be wrong
@@ -208,10 +207,10 @@ void AnimationInfo::changeAnimationData(OptionalClxSpriteList celSprite, int8_t 
 
 void AnimationInfo::processAnimation(bool reverseAnimation /*= false*/)
 {
-	tickCounterOfCurrentFrame++;
+	tickCounterOfCurrentFrame += TicksFixed::fromInt(1);
 	ticksSinceSequenceStarted_ += TicksFixed::fromInt(1);
-	if (tickCounterOfCurrentFrame >= ticksPerFrame) {
-		tickCounterOfCurrentFrame = 0;
+	while (tickCounterOfCurrentFrame >= ticksPerFrame) {
+		tickCounterOfCurrentFrame -= ticksPerFrame;
 		if (reverseAnimation) {
 			--currentFrame;
 			if (currentFrame == -1) {

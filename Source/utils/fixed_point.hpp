@@ -342,6 +342,8 @@ template <typename StorageT, unsigned FractionalBits>
 	return a <= whole;
 }
 
+using UFixed09_7 = FixedPoint<uint16_t, 7>;
+using Fixed09_7 = FixedPoint<int16_t, 7>;
 using Fixed10_6 = FixedPoint<int16_t, 6>;
 using Fixed26_6 = FixedPoint<int32_t, 6>;
 
@@ -350,5 +352,8 @@ concept FixedPointType = std::same_as<T, FixedPoint<typename T::StorageType, T::
 
 template <typename T>
 concept Fixed6Type = FixedPointType<T> && T::FractionalBitsV == 6;
+
+template <typename T>
+concept Fixed7Type = FixedPointType<T> && T::FractionalBitsV == 7;
 
 } // namespace devilution

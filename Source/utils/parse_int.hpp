@@ -115,4 +115,82 @@ ParseIntResult<FixedT> ParseFixed6(std::string_view str, const char **endOfParse
 	}
 }
 
+/**
+ * @brief Parses a sequence of decimal characters into a 7 bit fixed point number in the range [0, 1.0]
+ * @param str a potentially empty string of base 10 digits, optionally followed by non-digit characters
+ * @param[out] endOfParse equivalent to std::from_chars_result::ptr, used to tell where parsing stopped
+ * @return a value in the range [0, 128], representing a 1.7 fixed value in the range [0, 1.0]
+ */
+uint8_t ParseFixed7Fraction(std::string_view str, const char **endOfParse = nullptr);
+
+template <Fixed7Type FixedT>
+ParseIntResult<FixedT> ParseFixed7(std::string_view str, const char **endOfParse = nullptr)
+{
+	using StorageT = typename FixedT::StorageType;
+
+	if (endOfParse != nullptr) {
+		// To allow for early returns we set the end pointer to the start of the string, which is the common case for errors.
+		*endOfParse = str.data();
+	}
+
+	if (str.empty()) {
+		return std::unexpected { ParseIntError::ParseError };
+	}
+
+	constexpr StorageT minIntegerValue = std::numeric_limits<StorageT>::min() >> 7;
+	constexpr StorageT maxIntegerValue = std::numeric_limits<StorageT>::max() >> 7;
+
+	const char *currentChar; // will be set by the call to parseInt
+	ParseIntResult<StorageT> integerParseResult = ParseInt(str, minIntegerValue, maxIntegerValue, &currentChar);
+
+	bool isNegative = std::is_signed_v<StorageT> && str[0] == '-';
+	bool haveDigits = integerParseResult.has_value() || integerParseResult.error() == ParseIntError::OutOfRange;
+	if (haveDigits) {
+		str.remove_prefix(static_cast<size_t>(std::distance(str.data(), currentChar)));
+	} else if (isNegative) {
+		str.remove_prefix(1);
+	}
+
+	// if the string has no leading digits we still need to try parse the fraction part
+	uint8_t fractionPart = 0;
+	if (!str.empty() && str[0] == '.') {
+		// got a fractional part to read too
+		str.remove_prefix(1); // skip past the decimal point
+
+		fractionPart = ParseFixed7Fraction(str, &currentChar);
+		haveDigits = haveDigits || str.data() != currentChar;
+	}
+
+	if (!haveDigits) {
+		// early return in case we got a string like "-.abc", don't want to set the end pointer in this case
+		return std::unexpected { ParseIntError::ParseError };
+	}
+
+	if (endOfParse != nullptr) {
+		*endOfParse = currentChar;
+	}
+
+	if (!integerParseResult.has_value() && integerParseResult.error() == ParseIntError::OutOfRange) {
+		// if the integer parsing gave us an out of range value then we've done a bit of unnecessary
+		//  work parsing the fraction part, but it saves duplicating code.
+		return std::unexpected { integerParseResult.error() };
+	}
+	// integerParseResult could be a ParseError at this point because of a string like ".123" or "-.1"
+	//  so we need to default to 0 (and use the result of the minus sign check when it's relevant)
+	StorageT integerPart = integerParseResult.value_or(0);
+
+	// rounding could give us a value of 128 for the fraction part (e.g. 0.993 rounds to 1.0) so we need to ensure this doesn't overflow
+	if (fractionPart >= 128 && (integerPart >= maxIntegerValue || (std::is_signed_v<StorageT> && integerPart <= minIntegerValue))) {
+		return std::unexpected { ParseIntError::OutOfRange };
+	} else {
+		StorageT fixedValue = static_cast<StorageT>(integerPart << 7);
+		if (isNegative) {
+			fixedValue = static_cast<StorageT>(fixedValue - fractionPart);
+		} else {
+			fixedValue = static_cast<StorageT>(fixedValue + fractionPart);
+		}
+		return FixedT::fromRaw(fixedValue);
+	}
+}
+
 } // namespace devilution

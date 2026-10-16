@@ -14,6 +14,7 @@
 
 #include "cursor_defs.hpp"
 #include "tables/textdat.h"
+#include "utils/fixed_point.hpp"
 
 namespace devilution {
 
@@ -106,7 +107,7 @@ struct MonsterData {
 	bool hasSpecial = false;
 	bool hasSpecialSound = false;
 	int8_t frames[6] {};
-	int8_t rate[6] {};
+	Fixed09_7 rate[6] {};
 	int8_t minDunLvl = 0;
 	int8_t maxDunLvl = 0;
 	int8_t level = 0;

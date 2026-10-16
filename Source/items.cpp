@@ -2746,7 +2746,7 @@ void CalcPlrGraphics(Player &player, PlayerWeaponGraphic animWeaponId, PlayerArm
 		player.previewCelSprite = std::nullopt;
 		player_graphic graphic = player.getGraphic();
 		int8_t numberOfFrames;
-		int8_t ticksPerFrame;
+		Fixed09_7 ticksPerFrame;
 		player.getAnimationFramesAndTicksPerFrame(graphic, numberOfFrames, ticksPerFrame);
 		LoadPlrGFX(player, graphic);
 		OptionalClxSpriteList sprites;
@@ -4810,9 +4810,9 @@ void Item::setNewAnimation(bool showAnimation)
 	const int8_t numberOfFrames = ItemAnimLs[it];
 	const OptionalClxSpriteList sprite = itemanims[it] ? OptionalClxSpriteList { *itemanims[static_cast<size_t>(it)] } : std::nullopt;
 	if (_iCurs != ICURS_MAGIC_ROCK)
-		AnimInfo.setNewAnimation(sprite, numberOfFrames, 1, AnimationDistributionFlags::ProcessAnimationPending, 0, numberOfFrames);
+		AnimInfo.setNewAnimation(sprite, numberOfFrames, Fixed09_7::fromInt(1), AnimationDistributionFlags::ProcessAnimationPending, 0, numberOfFrames);
 	else
-		AnimInfo.setNewAnimation(sprite, numberOfFrames, 1);
+		AnimInfo.setNewAnimation(sprite, numberOfFrames, Fixed09_7::fromInt(1));
 	_iPostDraw = false;
 	_iRequest = false;
 	if (showAnimation) {

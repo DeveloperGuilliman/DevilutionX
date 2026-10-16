@@ -2242,7 +2242,7 @@ void InitMissileAnimationFromMonster(Missile &mis, Direction midir, const Monste
 	const ClxSpriteList sprites = *anim.spritesForDirection(midir);
 	const uint16_t width = sprites[0].width();
 	mis._miAnimData.emplace(sprites);
-	mis._miAnimDelay = anim.rate;
+	mis._miAnimDelay = anim.rate.whole();
 	mis._miAnimLen = anim.frames;
 	mis._miAnimWidth = width;
 	mis._miAnimWidth2 = CalculateSpriteTileCenterX(width);

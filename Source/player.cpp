@@ -1048,7 +1048,7 @@ bool DoDeath(Player &player)
 {
 	if (player.AnimInfo.isLastFrame()) {
 		if (player.AnimInfo.tickCounterOfCurrentFrame == 0) {
-			player.AnimInfo.ticksPerFrame = 100;
+			player.AnimInfo.ticksPerFrame = Fixed09_7::fromInt(100);
 			dFlags[player.position.tile.x][player.position.tile.y] |= DungeonFlag::DeadPlayer;
 		} else if (&player == MyPlayer && player.AnimInfo.tickCounterOfCurrentFrame == 30) {
 			MyPlayerIsDead = true;
@@ -1802,13 +1802,13 @@ uint16_t Player::getSpriteWidth() const
 	return GetPlayerSpriteWidth(cls, graphic, weaponGraphic);
 }
 
-void Player::getAnimationFramesAndTicksPerFrame(player_graphic graphics, int8_t &numberOfFrames, int8_t &ticksPerFrame) const
+void Player::getAnimationFramesAndTicksPerFrame(player_graphic graphics, int8_t &numberOfFrames, Fixed09_7 &ticksPerFrame) const
 {
-	ticksPerFrame = 1;
+	ticksPerFrame = Fixed09_7::fromInt(1);
 	switch (graphics) {
 	case player_graphic::Stand:
 		numberOfFrames = _pNFrames;
-		ticksPerFrame = 4;
+		ticksPerFrame = Fixed09_7::fromInt(4);
 		break;
 	case player_graphic::Walk:
 		numberOfFrames = _pWFrames;
@@ -1826,11 +1826,11 @@ void Player::getAnimationFramesAndTicksPerFrame(player_graphic graphics, int8_t 
 		break;
 	case player_graphic::Death:
 		numberOfFrames = _pDFrames;
-		ticksPerFrame = 2;
+		ticksPerFrame = Fixed09_7::fromInt(2);
 		break;
 	case player_graphic::Block:
 		numberOfFrames = _pBFrames;
-		ticksPerFrame = 3;
+		ticksPerFrame = Fixed09_7::fromInt(3);
 		break;
 	default:
 		app_fatal("Unknown player graphics");
@@ -2219,7 +2219,7 @@ void NewPlrAnim(Player &player, player_graphic graphic, Direction dir, Animation
 	}
 
 	int8_t numberOfFrames;
-	int8_t ticksPerFrame;
+	Fixed09_7 ticksPerFrame;
 	player.getAnimationFramesAndTicksPerFrame(graphic, numberOfFrames, ticksPerFrame);
 	player.AnimInfo.setNewAnimation(sprites, numberOfFrames, ticksPerFrame, flags, numSkippedFrames, distributeFramesBeforeFrame, static_cast<uint8_t>(previewShownGameTickFragments));
 }
@@ -2499,7 +2499,7 @@ void InitPlayer(Player &player, bool firstTime)
 			player._pmode = PM_STAND;
 			NewPlrAnim(player, player_graphic::Stand, Direction::South);
 			player.AnimInfo.currentFrame = GenerateRnd(player._pNFrames - 1);
-			player.AnimInfo.tickCounterOfCurrentFrame = GenerateRnd(3);
+			player.AnimInfo.tickCounterOfCurrentFrame = Fixed09_7::fromInt(GenerateRnd(3));
 		} else {
 			player._pgfxnum &= ~0xFU;
 			player._pmode = PM_DEATH;

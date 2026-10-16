@@ -44,11 +44,11 @@ public:
 	/**
 	 * @brief How many game ticks are needed to advance one Animation Frame
 	 */
-	int8_t ticksPerFrame;
+	Fixed09_7 ticksPerFrame;
 	/**
 	 * @brief Increases by one each game tick, counting how close we are to ticksPerFrame
 	 */
-	int8_t tickCounterOfCurrentFrame;
+	Fixed09_7 tickCounterOfCurrentFrame;
 	/**
 	 * @brief Number of frames in current animation
 	 */
@@ -93,7 +93,7 @@ public:
 	 * @param distributeFramesBeforeFrame Distribute the numSkippedFrames only before this frame
 	 * @param previewShownGameTickFragments Defines how long (in game ticks fraction) the preview animation was shown
 	 */
-	void setNewAnimation(OptionalClxSpriteList sprites, int8_t numberOfFrames, int8_t ticksPerFrame, AnimationDistributionFlags flags = AnimationDistributionFlags::None, int8_t numSkippedFrames = 0, int8_t distributeFramesBeforeFrame = 0, uint8_t previewShownGameTickFragments = 0);
+	void setNewAnimation(OptionalClxSpriteList sprites, int8_t numberOfFrames, Fixed09_7 ticksPerFrame, AnimationDistributionFlags flags = AnimationDistributionFlags::None, int8_t numSkippedFrames = 0, int8_t distributeFramesBeforeFrame = 0, uint8_t previewShownGameTickFragments = 0);
 
 	/**
 	 * @brief Changes the Animation Data on-the-fly. This is needed if a animation is currently in progress and the player changes his gear.
@@ -101,7 +101,7 @@ public:
 	 * @param numberOfFrames Number of Frames in Animation
 	 * @param ticksPerFrame How many game ticks are needed to advance one Animation Frame
 	 */
-	void changeAnimationData(OptionalClxSpriteList sprites, int8_t numberOfFrames, int8_t ticksPerFrame);
+	void changeAnimationData(OptionalClxSpriteList sprites, int8_t numberOfFrames, Fixed09_7 ticksPerFrame);
 
 	/**
 	 * @brief Process the Animation for a game tick (for example advances the frame)
@@ -122,11 +122,11 @@ private:
 	 * @brief A fixed point count of game ticks, signed because ProcessAnimationPending
 	 * distribution deliberately starts it out negative.
 	 */
-	using TicksFixed = FixedPoint<int16_t, 7>;
+	using TicksFixed = Fixed09_7;
 	/**
 	 * @brief A fixed point rate of animation-fractions advanced per game tick.
 	 */
-	using RateFixed = FixedPoint<uint16_t, 7>;
+	using RateFixed = UFixed09_7;
 
 	/**
 	 * @brief returns the progress as a fraction in time to the next game tick or no progress if the animation is frozen

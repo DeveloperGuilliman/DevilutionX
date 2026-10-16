@@ -202,7 +202,7 @@ void InitMonster(Monster &monster, Direction rd, size_t typeIndex, Point positio
 	monster.mode = MonsterMode::Stand;
 	monster.animInfo = {};
 	monster.changeAnimationData(MonsterGraphic::Stand);
-	monster.animInfo.tickCounterOfCurrentFrame = GenerateRnd(monster.animInfo.ticksPerFrame - 1);
+	monster.animInfo.tickCounterOfCurrentFrame = Fixed09_7::fromInt(GenerateRnd(std::max(0, monster.animInfo.ticksPerFrame.whole() - 1)));
 	monster.animInfo.currentFrame = GenerateRnd(monster.animInfo.numberOfFrames - 1);
 
 	const int maxhp = RandomIntBetween(monster.data().hitPointsMinimum, monster.data().hitPointsMaximum);

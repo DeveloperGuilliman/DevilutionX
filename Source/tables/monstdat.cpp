@@ -368,7 +368,7 @@ void LoadMonstDatFromFile(DataFile &dataFile, const std::string_view filename, b
 		reader.readBool("hasSpecial", monster.hasSpecial);
 		reader.readBool("hasSpecialSound", monster.hasSpecialSound);
 		reader.readIntArray("frames", monster.frames);
-		reader.readIntArray("rate", monster.rate);
+		reader.readFixed7Array("rate", monster.rate);
 		reader.readInt("minDunLvl", monster.minDunLvl);
 		reader.readInt("maxDunLvl", monster.maxDunLvl);
 		reader.readInt("level", monster.level);

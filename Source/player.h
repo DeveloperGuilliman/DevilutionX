@@ -777,7 +777,7 @@ public:
 
 	[[nodiscard]] uint16_t getSpriteWidth() const;
 
-	void getAnimationFramesAndTicksPerFrame(player_graphic graphics, int8_t &numberOfFrames, int8_t &ticksPerFrame) const;
+	void getAnimationFramesAndTicksPerFrame(player_graphic graphics, int8_t &numberOfFrames, Fixed09_7 &ticksPerFrame) const;
 
 	[[nodiscard]] ClxSprite currentSprite() const
 	{

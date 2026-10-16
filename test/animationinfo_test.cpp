@@ -108,7 +108,7 @@ void RunAnimationTest(const std::vector<TestData *> &vecTestData)
 			currentGameTick += 1;
 			animInfo.processAnimation();
 			EXPECT_EQ(animInfo.currentFrame, gameTickData->_ExpectedAnimationFrame);
-			EXPECT_EQ(animInfo.tickCounterOfCurrentFrame, gameTickData->_ExpectedAnimationCnt);
+			EXPECT_EQ(animInfo.tickCounterOfCurrentFrame, Fixed09_7::fromInt(gameTickData->_ExpectedAnimationCnt));
 		} break;
 		case TestDataType::Rendering: {
 			auto *renderingData = static_cast<RenderingData *>(x);
@@ -117,7 +117,7 @@ void RunAnimationTest(const std::vector<TestData *> &vecTestData)
 			    << std::fixed << std::setprecision(2)
 			    << "ProgressToNextGameTick: " << renderingData->_fProgressToNextGameTick
 			    << " currentFrame: " << animInfo.currentFrame
-			    << " DelayCounter: " << animInfo.tickCounterOfCurrentFrame
+			    << " DelayCounter: " << animInfo.tickCounterOfCurrentFrame / 128.0
 			    << " GameTick: " << currentGameTick;
 		} break;
 		}

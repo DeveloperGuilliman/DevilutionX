@@ -169,7 +169,7 @@ struct AnimStruct {
 
 	uint16_t width;
 	int8_t frames;
-	int8_t rate;
+	Fixed09_7 rate;
 };
 
 enum class MonsterSound : uint8_t {

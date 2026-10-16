@@ -158,6 +158,70 @@ public:
 		return parseIntArray<T>(destination.data(), N);
 	}
 
+	template <typename T>
+	[[nodiscard]] std::expected<void, Error> parseFixed6Array(T *destination, size_t n)
+	{
+		size_t i = 0;
+		for (const std::string_view part : SplitByChar(value(), ',')) {
+			if (i == n)
+				return std::unexpected(Error::InvalidValue);
+			T parsed{};
+			auto res = ParseFixed6<T>(part);
+			if (!res.has_value()) {
+				return std::unexpected(mapError(res.error()));
+			}
+			destination[i++] = res.value();
+		}
+		if (i != n)
+			return std::unexpected(Error::InvalidValue);
+
+		return {};
+	}
+
+	template <typename T, size_t N>
+	[[nodiscard]] std::expected<void, Error> parseFixed6Array(T (&destination)[N])
+	{
+		return parseFixed6Array<T>(destination, N);
+	}
+
+	template <typename T, size_t N>
+	[[nodiscard]] std::expected<void, Error> parseFixed6Array(std::array<T, N> &destination)
+	{
+		return parseFixed6Array<T>(destination.data(), N);
+	}
+
+	template <typename T>
+	[[nodiscard]] std::expected<void, Error> parseFixed7Array(T *destination, size_t n)
+	{
+		size_t i = 0;
+		for (const std::string_view part : SplitByChar(value(), ',')) {
+			if (i == n)
+				return std::unexpected(Error::InvalidValue);
+			T parsed{};
+			auto result = ParseFixed7<T>(part);
+			if (!result.has_value()) {
+	            return mapError(result.error());
+			}
+			destination[i++] = result.value();
+		}
+		if (i != n)
+			return std::unexpected(Error::InvalidValue);
+
+		return {};
+	}
+
+	template <typename T, size_t N>
+	[[nodiscard]] std::expected<void, Error> parseFixed7Array(T (&destination)[N])
+	{
+		return parseFixed7Array<T>(destination, N);
+	}
+
+	template <typename T, size_t N>
+	[[nodiscard]] std::expected<void, Error> parseFixed7Array(std::array<T, N> &destination)
+	{
+		return parseFixed7Array<T>(destination.data(), N);
+	}
+
 	template <typename T, typename ParseFn>
 	[[nodiscard]] std::expected<void, std::string> parseEnumArray(T *destination, size_t n, std::optional<T> fillMissing, ParseFn &&parseFn)
 	{
@@ -259,6 +323,47 @@ public:
 	{
 		T value {};
 		return parseFixed6(value).transform([value]() { return value; });
+	}
+
+	/**
+	 * @brief Attempts to parse the current field as a fixed point value with 7 bits for the fraction
+	 *
+	 * You can freely interleave this method with calls to operator*. If this is the first value
+	 * access since the last advance this will scan the current field and store it for later
+	 * use with operator* or repeated calls to parseInt/Fixed7 (even with different types).
+	 * @tparam T a FixedPoint type with 7 fractional bits, e.g. Fixed10_7
+	 * @param destination value to store the result of successful parsing
+	 * @return an error code equivalent to what you'd get from from_chars if parsing failed
+	 */
+	template <Fixed7Type T>
+	[[nodiscard]] std::expected<void, Error> parseFixed7(T &destination)
+	{
+		ParseIntResult<T> parseResult;
+		if (state_->status == GetFieldResult::Status::ReadyToRead) {
+			const char *begin = state_->next;
+			// first read, consume digits
+			parseResult = ParseFixed7<T>({ begin, static_cast<size_t>(end_ - begin) }, &state_->next);
+			// then read the remainder of the field
+			*state_ = GetNextField(state_->next, end_);
+			// and prepend what was already parsed
+			state_->value = { begin, (state_->value.data() - begin) + state_->value.size() };
+		} else {
+			parseResult = ParseFixed7<T>(state_->value);
+		}
+
+		if (parseResult.has_value()) {
+			destination = parseResult.value();
+			return {};
+		} else {
+			return mapError(parseResult.error());
+		}
+	}
+
+	template <Fixed7Type T>
+	[[nodiscard]] std::expected<T, Error> asFixed7()
+	{
+		T value {};
+		return parseFixed7(value).transform([value]() { return value; });
 	}
 
 	/**

@@ -54,6 +54,7 @@ namespace {
 
 constexpr size_t MaxMissilesForSaveGame = 125;
 constexpr size_t PlayerWalkPathSizeForSaveGame = 25;
+constexpr int FixedPointBitMask = 0x40000000;
 
 uint8_t giNumberQuests;
 uint8_t giNumberOfSmithPremiumItems;
@@ -86,6 +87,22 @@ T SwapBE(T in)
 	default:
 		return in;
 	}
+}
+
+// FIXME : Breaks load/save compatibility
+Fixed09_7 IntToFixed09_7(const int value)
+{
+	if ((value & FixedPointBitMask) == 0) {
+		return Fixed09_7::fromInt(value);
+	} else {
+		return Fixed09_7::fromRaw(value & ~FixedPointBitMask);
+	}
+}
+
+// FIXME : Breaks load/save compatibility
+int Fixed09_7ToInt(const Fixed09_7 value)
+{
+	return value.raw() | FixedPointBitMask;
 }
 
 void TerminateUtf8(char *str, size_t maxLength)
@@ -423,8 +440,8 @@ void LoadPlayer(LoadHelper &file, Player &player)
 	player._pgfxnum = file.NextLENarrow<uint32_t, uint8_t>();
 	file.Skip<uint32_t>(); // Skip pointer pData
 	player.AnimInfo = {};
-	player.AnimInfo.ticksPerFrame = file.NextLENarrow<int32_t, int8_t>(1);
-	player.AnimInfo.tickCounterOfCurrentFrame = file.NextLENarrow<int32_t, int8_t>();
+	player.AnimInfo.ticksPerFrame = IntToFixed09_7(file.NextLENarrow<int32_t, int8_t>(1));
+	player.AnimInfo.tickCounterOfCurrentFrame = IntToFixed09_7(file.NextLENarrow<int32_t, int8_t>());
 	player.AnimInfo.numberOfFrames = file.NextLENarrow<int32_t, int8_t>();
 	player.AnimInfo.currentFrame = file.NextLENarrow<int32_t, int8_t>(-1);
 	file.Skip<uint32_t>(3); // Skip _pAnimWidth, _pAnimWidth2, _peflag
@@ -688,9 +705,9 @@ bool gbSkipSync = false;
 
 	file->Skip(4); // Skip pointer _mAnimData
 	monster.animInfo = {};
-	monster.animInfo.ticksPerFrame = file->NextLENarrow<int32_t, int8_t>();
+	monster.animInfo.ticksPerFrame = IntToFixed09_7(file->NextLENarrow<int32_t, int8_t>());
 	// Ensure that we can increase the tickCounterOfCurrentFrame at least once without overflow (needed for backwards compatibility for sitting gargoyles)
-	monster.animInfo.tickCounterOfCurrentFrame = file->NextLENarrow<int32_t, int8_t>(1) - 1;
+	monster.animInfo.tickCounterOfCurrentFrame = IntToFixed09_7(file->NextLENarrow<int32_t, int8_t>(1) - 1);
 	monster.animInfo.numberOfFrames = file->NextLENarrow<int32_t, int8_t>();
 	monster.animInfo.currentFrame = file->NextLENarrow<int32_t, int8_t>(-1);
 	file->Skip(4); // Skip _meflag
@@ -1293,8 +1310,9 @@ void SavePlayer(SaveHelper &file, const Player &player)
 	file.Skip(4); // Unused
 	file.WriteLE<uint32_t>(player._pgfxnum);
 	file.Skip(4); // Skip pointer _pAnimData
-	file.WriteLE<int32_t>(std::max(0, player.AnimInfo.ticksPerFrame - 1));
-	file.WriteLE<int32_t>(player.AnimInfo.tickCounterOfCurrentFrame);
+	// FIXME : Breaks load/save compatibility
+	file.WriteLE<int32_t>(std::max(0, player.AnimInfo.ticksPerFrame.raw() - 1));
+	file.WriteLE<int32_t>(player.AnimInfo.tickCounterOfCurrentFrame.raw());
 	file.WriteLE<int32_t>(player.AnimInfo.numberOfFrames);
 	file.WriteLE<int32_t>(player.AnimInfo.currentFrame + 1);
 	// write _pAnimWidth for vanilla compatibility
@@ -1537,8 +1555,9 @@ void SaveMonster(SaveHelper *file, Monster &monster, MonsterConversionData *mons
 	file->Skip(2); // Unused
 
 	file->Skip(4); // Skip pointer _mAnimData
-	file->WriteLE<int32_t>(monster.animInfo.ticksPerFrame);
-	file->WriteLE<int32_t>(monster.animInfo.tickCounterOfCurrentFrame);
+	// FIXME : Breaks load/save compatibility
+	file->WriteLE<int32_t>(Fixed09_7ToInt(monster.animInfo.ticksPerFrame));
+	file->WriteLE<int32_t>(Fixed09_7ToInt(monster.animInfo.tickCounterOfCurrentFrame));
 	file->WriteLE<int32_t>(monster.animInfo.numberOfFrames);
 	file->WriteLE<int32_t>(monster.animInfo.currentFrame + 1);
 	file->Skip<uint32_t>(); // Skip _meflag

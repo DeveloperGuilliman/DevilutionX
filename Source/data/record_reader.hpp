@@ -63,11 +63,46 @@ public:
 		failOnError(field.parseIntArray(out), name, field);
 	}
 
+	template <typename T, size_t N>
+	void readFixed6Array(std::string_view name, T (&out)[N])
+	{
+		DataFileField field = nextField();
+		failOnError(field.parseFixed6Array(out), name, field);
+	}
+
+	template <typename T, size_t N>
+	void readFixed6Array(std::string_view name, std::array<T, N> &out)
+	{
+		DataFileField field = nextField();
+		failOnError(field.parseFixed6Array(out), name, field);
+	}
+
+	template <typename T, size_t N>
+	void readFixed7Array(std::string_view name, T (&out)[N])
+	{
+		DataFileField field = nextField();
+		failOnError(field.parseFixed7Array(out), name, field);
+	}
+
+	template <typename T, size_t N>
+	void readFixed7Array(std::string_view name, std::array<T, N> &out)
+	{
+		DataFileField field = nextField();
+		failOnError(field.parseFixed7Array(out), name, field);
+	}
+
 	template <Fixed6Type T>
 	void readFixed6(std::string_view name, T &out)
 	{
 		DataFileField field = nextField();
 		failOnError(field.parseFixed6(out), name, field);
+	}
+
+	template <Fixed7Type T>
+	void readFixed7(std::string_view name, T &out)
+	{
+		DataFileField field = nextField();
+		failOnError(field.parseFixed7(out), name, field);
 	}
 
 	void readBool(std::string_view name, bool &out)
