@@ -16,7 +16,7 @@ namespace devilution {
 inline constexpr char TristramTownId[] = "tristram";
 
 /** @brief Town portal spell anchor slots; must match MAXPORTAL in portal.h. */
-inline constexpr size_t NumTownPortalSlots = 4;
+inline constexpr size_t NumTownPortalSlots = 8;
 
 /** @brief Legacy positions for town portal missiles (one per player slot). */
 inline constexpr std::array<Point, NumTownPortalSlots> DefaultTristramPortalPositions = { {
@@ -24,6 +24,10 @@ inline constexpr std::array<Point, NumTownPortalSlots> DefaultTristramPortalPosi
 	Point { 59, 40 },
 	Point { 61, 40 },
 	Point { 63, 40 },
+	Point { 58, 43 },
+	Point { 60, 43 },
+	Point { 62, 43 },
+	Point { 64, 43 },
 } };
 
 /**
