@@ -5,6 +5,7 @@
  */
 #include "portal.h"
 
+#include "levels/town_data.h"
 #include "lighting.h"
 #include "missiles.h"
 #include "multi.h"
@@ -20,17 +21,6 @@ namespace {
 
 /** Current portal number (a portal array index). */
 size_t portalindex;
-
-std::array<Point, MAXPORTAL> ActivePortalPositions = { {
-	{ 57, 40 },
-	{ 59, 40 },
-	{ 61, 40 },
-	{ 63, 40 },
-	{ 58, 43 },
-	{ 60, 43 },
-	{ 62, 43 },
-	{ 64, 43 },
-													   } };
 
 } // namespace
 
@@ -187,18 +177,6 @@ bool PosOkPortal(int lvl, Point position)
 			return true;
 	}
 	return false;
-}
-
-Point GetPortalTownPosition(size_t portalIndex)
-{
-	if (portalIndex >= MAXPORTAL)
-		return ActivePortalPositions[0];
-	return ActivePortalPositions[portalIndex];
-}
-
-void SetPortalTownPositions(std::array<Point, MAXPORTAL> positions)
-{
-	ActivePortalPositions = positions;
 }
 
 } // namespace devilution
