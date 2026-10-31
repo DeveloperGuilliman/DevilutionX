@@ -24,6 +24,7 @@ itmRestoreMana	1.5
 splRestoreLife	1.5
 splRestoreMana	1.5
 healOtherRestoreLife	1.5
+preferredCharacterAttributes	Dexterity,Magic
 meleeArmorPiercingBonus	0
 bowDamageMod	0.5
 arrowVelocityBonus	0.125

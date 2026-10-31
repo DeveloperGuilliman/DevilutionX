@@ -166,6 +166,15 @@ std::expected<PlayerClassFlag, std::string> ParsePlayerClassFlag(std::string_vie
 	return std::unexpected("Unknown enum value");
 }
 
+std::expected<PreferredCharacterAttribute, std::string> ParsePreferredCharacterAttribute(std::string_view value)
+{
+	const std::optional<PreferredCharacterAttribute> enumValueOpt = magic_enum::enum_cast<PreferredCharacterAttribute>(value);
+	if (enumValueOpt.has_value()) {
+		return enumValueOpt.value();
+	}
+	return std::unexpected("Unknown enum value");
+}
+
 std::expected<PlayerClassAvailabilityFlag, std::string> ParsePlayerClassAvailabilityFlag(std::string_view value)
 {
 	const std::optional<PlayerClassAvailabilityFlag> enumValueOpt = magic_enum::enum_cast<PlayerClassAvailabilityFlag>(value);
@@ -209,6 +218,7 @@ void LoadClassData(std::string_view classPath, ClassAttributes &attributes, Play
 	reader.readDecimal("splRestoreLife", attributes.splRestoreLife);
 	reader.readDecimal("splRestoreMana", attributes.splRestoreMana);
 	reader.readDecimal("healOtherRestoreLife", attributes.healOtherRestoreLife);
+	reader.readEnumList("preferredCharacterAttributes", attributes.preferredCharacterAttributes, ParsePreferredCharacterAttribute);
 	reader.readDecimal("meleeArmorPiercingBonus", combat.meleeArmorPiercingBonus);
 	reader.readDecimal("bowDamageMod", combat.bowDamageMod);
 	reader.readDecimal("arrowVelocityBonus", combat.arrowVelocityBonus);

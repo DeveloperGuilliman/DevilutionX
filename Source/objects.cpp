@@ -2722,31 +2722,21 @@ void OperateShrineOily(Player &player, Point spawnPosition)
 	if (&player != MyPlayer)
 		return;
 
-	switch (player._pClass) {
-	case HeroClass::Warrior:
-		ModifyPlrStr(player, 2);
-		break;
-	case HeroClass::Rogue:
-		ModifyPlrDex(player, 2);
-		break;
-	case HeroClass::Sorcerer:
-		ModifyPlrMag(player, 2);
-		break;
-	case HeroClass::Barbarian:
-		ModifyPlrVit(player, 2);
-		break;
-	case HeroClass::Monk:
-		ModifyPlrStr(player, 1);
-		ModifyPlrDex(player, 1);
-		break;
-	case HeroClass::Bard:
-		ModifyPlrDex(player, 1);
-		ModifyPlrMag(player, 1);
-		break;
-	default:
-		break;
+	const ClassAttributes &classAttributes = GetClassAttributes(player._pClass);
+	// When we have only one preferred attribute, we increase it two times
+	int amount = (std::popcount(static_cast<uint8_t>(classAttributes.preferredCharacterAttributes)) == 1) ? 2 : 1;
+	if (HasAnyOf(classAttributes.preferredCharacterAttributes, PreferredCharacterAttribute::Strength)) {
+		ModifyPlrStr(player, amount);
 	}
-
+	if (HasAnyOf(classAttributes.preferredCharacterAttributes, PreferredCharacterAttribute::Dexterity)) {
+		ModifyPlrDex(player, amount);
+	}
+	if (HasAnyOf(classAttributes.preferredCharacterAttributes, PreferredCharacterAttribute::Magic)) {
+		ModifyPlrMag(player, amount);
+	}
+	if (HasAnyOf(classAttributes.preferredCharacterAttributes, PreferredCharacterAttribute::Vitality)) {
+		ModifyPlrVit(player, amount);
+	}
 	CheckStats(player);
 	CalcPlrInv(player, true);
 	RedrawEverything();
@@ -2925,7 +2915,6 @@ void OperateShrine(Player &player, Object &shrine, SfxID sType)
 	PlaySfxLoc(sType, shrine.position);
 	shrine._oAnimFlag = true;
 	shrine._oAnimDelay = 1;
-
 	switch (shrine._oVar1) {
 	case ShrineMysterious:
 		OperateShrineMysterious(rng, player);

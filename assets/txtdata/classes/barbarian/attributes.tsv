@@ -24,6 +24,7 @@ itmRestoreMana	1
 splRestoreLife	2
 splRestoreMana	1
 healOtherRestoreLife	2
+preferredCharacterAttributes	Vitality
 meleeArmorPiercingBonus	0.125
 bowDamageMod	0.5
 arrowVelocityBonus	0

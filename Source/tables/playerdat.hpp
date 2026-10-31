@@ -62,6 +62,17 @@ enum class PlayerClassFlag : uint16_t {
 };
 use_enum_as_flags(PlayerClassFlag);
 
+enum class PreferredCharacterAttribute : uint8_t {
+	None = 0,
+	Strength = 1 << 0,
+	Magic = 1 << 1,
+	Dexterity = 1 << 2,
+	Vitality = 1 << 3,
+
+	Last = Vitality
+};
+use_enum_as_flags(PreferredCharacterAttribute);
+
 struct PlayerData {
 	/* Class Name */
 	std::string className;
@@ -122,6 +133,8 @@ struct ClassAttributes {
 	Fixed10_6 splRestoreMana;
 	/* Life restore heal other multipler */
 	Fixed10_6 healOtherRestoreLife;
+	/* Preferred attributes for this class */
+	PreferredCharacterAttribute preferredCharacterAttributes;
 };
 
 const ClassAttributes &GetClassAttributes(HeroClass playerClass);
@@ -314,6 +327,13 @@ struct magic_enum::customize::enum_range<devilution::PlayerClassFlag> {
 	static constexpr uint16_t min = static_cast<uint64_t>(devilution::PlayerClassFlag::None);
 	static constexpr uint16_t max = static_cast<uint64_t>(devilution::PlayerClassFlag::Last);
 };
+
+template <>
+struct magic_enum::customize::enum_range<devilution::PreferredCharacterAttribute> {
+	static constexpr uint16_t min = static_cast<uint64_t>(devilution::PreferredCharacterAttribute::None);
+	static constexpr uint16_t max = static_cast<uint64_t>(devilution::PreferredCharacterAttribute::Last);
+};
+
 
 template <>
 struct magic_enum::customize::enum_range<devilution::PlayerClassAvailabilityFlag> {
