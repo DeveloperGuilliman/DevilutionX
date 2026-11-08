@@ -9,14 +9,14 @@ if(NOT DEFINED DEVILUTIONX_MODS_MPQ_DIRECTORY)
 endif()
 
 set(hellfire_mod
-    changelog.txt
+  changelog.txt
   manifest.ini
   data/diabsmall.cel
   data/hf_logo3.cel
+  data/monstertags.clx
   lua/mods/hf/init.lua
   missiles/blueg.trn
-  monsters/dmage/dmagew.cl2     
-  monsters/golem/fire.trn       
+  monsters/golem/fire.trn
   monsters/skelaxe/black.trn    
   monsters/skelaxe/old_pearl.trn
   monsters/skelaxe/pearl.trn    
@@ -56,6 +56,7 @@ set(hellfire_mod
   txtdata/classes/warrior/starting_loadout.tsv
   txtdata/items/item_prefixes.tsv
   txtdata/items/item_suffixes.tsv
+  txtdata/items/itemdat.tsv
   txtdata/items/unique_itemdat.tsv
   txtdata/missiles/misdat.tsv
   txtdata/missiles/missile_sprites.tsv
