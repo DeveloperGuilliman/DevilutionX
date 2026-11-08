@@ -1,5 +1,5 @@
 Attribute	Value
-classFlags	CriticalStrike,TwoHandedAxeMaceSwordCleave,WieldTwoHandedSwordMaceShield
+classFlags	CriticalStrike,TwoHandedAxeMaceSwordCleave
 classAvailabilityFlags	Hellfire
 baseStr	40
 baseMag	0
@@ -24,6 +24,7 @@ itmRestoreMana	1
 splRestoreLife	2
 splRestoreMana	1
 healOtherRestoreLife	2
+preferredCharacterAttributes	Vitality
 meleeArmorPiercingBonus	0.125
 bowDamageMod	0.5
 arrowVelocityBonus	0
@@ -31,7 +32,7 @@ armorClassBonus	0.125
 magicResistanceBonus	1
 fireResistanceBonus	1
 lightningResistanceBonus	1
-stunThreshold	1.125
+stunThreshold	1.25
 normalLightArmorAC	0
 magicLightArmorAC	0
 uniqueLightArmorAC	0

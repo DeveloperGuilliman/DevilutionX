@@ -2882,7 +2882,7 @@ int OperateShrineOily(DiabloGenerator &rng, Player &player, Point spawnPosition,
 
 	const ClassAttributes &classAttributes = GetClassAttributes(player._pClass);
 	// When we have only one preferred attribute, we increase it two times
-	int amount = (std::popcount(static_cast<uint8_t>(classAttributes.preferredCharacterAttributes)) == 1) ? 2 : 1;
+	int amount = (std::popcount(static_cast<uint8_t>(classAttributes.preferredCharacterAttributes)) == 1) ? powerParam2 : powerParam1;
 	if (HasAnyOf(classAttributes.preferredCharacterAttributes, PreferredCharacterAttribute::Strength)) {
 		ModifyPlrStr(player, amount);
 	}

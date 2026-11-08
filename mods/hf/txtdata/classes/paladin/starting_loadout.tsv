@@ -1,10 +1,10 @@
 Variable	Value
-skill	Search
+skill	BloodRitual
 spell	Null
 spellLevel	0
-item0	IDI_SHORTSTAFF
-item1	IDI_HEAL
+item0	IDI_WARRCLUB
+item1	IDI_WARRSHLD
 item2	IDI_HEAL
-item3	IDI_NONE
+item3	IDI_HEAL
 item4	IDI_NONE
 gold	100

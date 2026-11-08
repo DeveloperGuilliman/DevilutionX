@@ -46,11 +46,11 @@ set(hellfire_mod
   txtdata/classes/summoner/sounds.tsv
   txtdata/classes/summoner/sprites.tsv
   txtdata/classes/summoner/starting_loadout.tsv
-  txtdata/classes/test/animations.tsv
-  txtdata/classes/test/attributes.tsv
-  txtdata/classes/test/sounds.tsv
-  txtdata/classes/test/sprites.tsv
-  txtdata/classes/test/starting_loadout.tsv
+  txtdata/classes/paladin/animations.tsv
+  txtdata/classes/paladin/attributes.tsv
+  txtdata/classes/paladin/sounds.tsv
+  txtdata/classes/paladin/sprites.tsv
+  txtdata/classes/paladin/starting_loadout.tsv
   txtdata/classes/warrior/attributes.tsv
   txtdata/classes/warrior/sprites.tsv
   txtdata/classes/warrior/starting_loadout.tsv

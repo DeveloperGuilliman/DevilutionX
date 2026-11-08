@@ -2672,7 +2672,6 @@ void AddRage(Missile &missile, AddMissileParameter &parameter)
 		return;
 	}
 
-	missile._midam = player.getCharacterLevel() * 6;
 	missile.duration = 245 + (player.getCharacterLevel() * 2);
 	missile.var1 = missile.duration;
 
@@ -4082,9 +4081,6 @@ void ProcessRage(Missile &missile)
 
 	RedrawEverything();
 	player.Say(HeroSpeech::HeavyBreathing);
-
-	if (missile._miDelFlag)
-		ApplyPlrDamage(DamageType::Physical, player, Fixed26_6::fromInt(missile._midam), 1); // Prevent penalty from killing the player
 }
 
 void ProcessInferno(Missile &missile)

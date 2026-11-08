@@ -8,21 +8,21 @@ ShrineStone	Stone	OperateShrineStone	0	0	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	T
 ShrineReligious	Religious	OperateShrineReligious	0	0	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	Time cannot diminish the power of steel			
 ShrineEnchanted	Enchanted	OperateShrineEnchanted	1	-1	Any	DTYPE_CATHEDRAL	DTYPE_CATACOMBS	true	false	Magic is not always what it seems to be			
 ShrineThaumaturgic	Thaumaturgic	OperateShrineThaumaturgic	0	0	Single	DTYPE_TOWN	DTYPE_CRYPT	false	false	What once was opened now is closed			
-ShrineFascinating	Fascinating	OperateShrineFascinating	2	10	Any	DTYPE_TOWN	DTYPE_CRYPT	true	true	Intensity comes at the cost of wisdom			
+ShrineFascinating	Fascinating	OperateShrineFascinating	2	-5	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	Intensity comes at the cost of wisdom			
 ShrineCryptic	Cryptic	OperateShrineCryptic	2	0	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	Arcane power brings destruction			
 ShrineMagicaL2	Magical	OperateShrineMagical	2	0	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	While the spirit is vigilant the body thrives			
 ShrineEldritch	Eldritch	OperateShrineEldritch	0	0	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	Crimson and Azure become as the sun			
 ShrineEerie	Eerie	OperateShrineEerie	2	0	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	Knowledge and wisdom at the cost of self			
 ShrineDivine	Divine	OperateShrineDivine	4	2	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	Drink and be refreshed			
 ShrineHoly	Holy	OperateShrineHoly	2	0	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	Wherever you go, there you are			
-ShrineSacred	Sacred	OperateShrineSacred	2	10	Any	DTYPE_TOWN	DTYPE_CRYPT	true	true	Energy comes at the cost of wisdom			
+ShrineSacred	Sacred	OperateShrineSacred	2	-5	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	Energy comes at the cost of wisdom			
 ShrineSpiritual	Spiritual	OperateShrineSpiritual	5	10	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	Riches abound when least expected			
 ShrineSpooky	Spooky	OperateShrineSpooky	0	0	Multi	DTYPE_TOWN	DTYPE_CRYPT	true	false	Where avarice fails, patience gains reward	Blessed by a benevolent companion!		
 ShrineAbandoned	Abandoned	OperateShrineAbandoned	2	0	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	The hands of men may be guided by fate			
 ShrineCreepy	Creepy	OperateShrineCreepy	2	0	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	Strength is bolstered by heavenly faith			
 ShrineQuiet	Quiet	OperateShrineQuiet	2	0	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	The essence of life flows from within			
 ShrineSecluded	Secluded	OperateShrineSecluded	0	0	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	The way is made clear when viewed from above			
-ShrineOrnate	Ornate	OperateShrineOrnate	2	10	Any	DTYPE_TOWN	DTYPE_CRYPT	true	true	Salvation comes at the cost of wisdom			
+ShrineOrnate	Ornate	OperateShrineOrnate	2	-5	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	Salvation comes at the cost of wisdom			
 ShrineGlimmering	Glimmering	OperateShrineGlimmering	0	0	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	Mysteries are revealed in the light of reason			
 ShrineTainted	Tainted	OperateShrineTainted	1	-1	Multi	DTYPE_TOWN	DTYPE_CRYPT	true	false	Those who are last may yet be first	Generosity brings its own rewards		
 ShrineOily	Oily	OperateShrineOily	2	1	Any	DTYPE_TOWN	DTYPE_CRYPT	true	false	That which does not kill you...			

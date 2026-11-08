@@ -1,19 +1,20 @@
 Hellfire Plus 0.1
 
 Player changes
-	- Barbarian class
-		* Increased baseMeleeToHit from 50 to 70 so it had a hit bonus like all classes, the same one as the warrior.
+	- Barbarian class:
+		* Removed ability to wield two handed swords and maces with a shield.
 		* Added palette translation to make it a bit different from warrior.
-	- Bard class
+	- Bard class:
 		* Changed name to Assassin.
 		* Changed initial weapons to two Katars and added a fire rune.
 		* Changed ability from Identify to Infravision.
 		* Added palette translation to make it a bit different from rogue.
-	- Rogue class
+	- Rogue class:
 		* Increased max Magic from 70 to 75, in order to the rogue to have the same maximum total sum of atributes of 460 like the rest of classes instead of the actual 455. 
-	- Necromancer class (new, testing)
+	- Necromancer class (new, testing):
 		* Right now just a copy of the sorcerer, with the Diablo 1 sorcerer starting equipment, less max Magic, more max Strength and Vitality, more mana gained per Magic and Skeleton as starting skill.
-	
+	- Paladin class (new, testing):
+		* Testing of a class using the monk sprites with less strengh, more magic and vitality and the ability to wield two handed swords and maces with a shield.
 Item changes
 	- Normal items:
 		* Added weapons "Katar" and "Flanged Mace"
@@ -37,38 +38,51 @@ Spell changes
 	- Apocalypse:
 		* Max mana cost/min mana cost/level cost reduction changed from 150/90/6 to 180/60/5 so upgrading to level 10 or more is not wasted.
 	- Mana shield:
-		* Mana shield doesn't block all the damage. Starts at 50% at spell level 0 up to 99.5% at spell level 15.		
+		* Mana shield doesn't block all the damage. Starts at 50% at spell level 0 up to 99.5% at spell level 15.
+	- Rage:
+		* Life is not lost at the end of the recovery step.
 	- New spell, Skeleton:
 		* Summons a skeleton. Similar to Golem but with half starting life, half damage and less to hit. It is faster than golem and costs life instead of mana.
 	- New spell, Sentinel:
 		* Summons a electric hydra. Similar to Guardian but shoots lightning instead of firebolts.
 
 Monster changes
-	- Zombie
+	- Zombie:
 		* Black Death hits Hits no longer decrease max health, now decreases vitality.	
-	- Fiend
+	- Fiend:
 		* Familiar changed from Demon to Animal, like the rest of bat monsters.
-	- Lord Satyr
+	- Lord Satyr:
 		* Changed from Animal to Demon, AI to GoatMelee and can open doors like the rest of melee goat monsters.
 		* "Blightstone the Weak" unique version moved to level 8so it can spawn.
-	- Hidden
+	- Hidden:
 		* "Hazeshifter" unique version moved to level 8 so it can spawn.
-	- Red Storm
+	- Red Storm:
 		* "Glasskull the Jagged" unique version moved to level 11 so it can spawn.
 		* "Stormbane" unique version moved to level 12 so it can spawn.
 		* "Storm Lord" unique version moved to level 13 so it can spawn.
-	- Magma Demon
+	- Magma Demon:
 		* "Bronzefist Firestone" unique version moved to level 9.
-	- Cave Viper
+	- Cave Viper:
 		* "Lord of the Pit" unique version moved to level 15 so it can spawn.
-	- Horned Demon
+	- Horned Demon:
 		* "Grimspike" unique version moved to level 10 so it can spawn.
-	- Counselor
+	- Counselor:
 		* "Blacktongue" unique version moved to level 13 so it can spawn.
-	- The Shredded
+	- The Shredded:
 		* "Soulslash" unique version moved to level 17 so it can spawn.
 		* "Pain Master" unique version moved to level 19 so it can spawn.
 		* "Zamphir" unique version moved to level 20 so it can spawn.
+
+Shrines
+	- Fascinating:
+		* Loses 5 magic instead of 10% of base max mana
+		* No longer considered crippling
+	- Sacred:
+		* Loses 5 magic instead of 10% of base max mana
+		* No longer considered crippling
+	- Ornate:
+		* Loses 5 magic instead of 10% of base max mana
+		* No longer considered crippling
 
 Town
 	- Moved Wirt to a closer location in the rocks gap behind Farnham.
