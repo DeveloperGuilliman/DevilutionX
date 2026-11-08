@@ -118,6 +118,7 @@ set(libdevilutionx_SRCS
   lua/modules/render.cpp
   lua/modules/system.cpp
   lua/modules/towners.cpp
+  lua/modules/towns.cpp
   lua/repl.cpp
 
   monsters/validation.cpp
@@ -617,6 +618,7 @@ target_sources(libdevilutionx_log INTERFACE $<TARGET_OBJECTS:libdevilutionx_stri
 
 add_devilutionx_object_library(libdevilutionx_level_objects
   tables/objdat.cpp
+  tables/shrinedat.cpp
   objects.cpp
 )
 target_link_dependencies(libdevilutionx_level_objects PUBLIC
