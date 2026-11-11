@@ -29,7 +29,6 @@ int OperateShrineCreepy(DiabloGenerator &rng, Player &player, Point spawnPositio
 int OperateShrineQuiet(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData);
 int OperateShrineSecluded(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData);
 int OperateShrineGlimmering(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData);
-int OperateShrineTainted(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData);
 int OperateShrineOily(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData);
 int OperateShrineGlowing(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData);
 int OperateShrineMendicant(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData);

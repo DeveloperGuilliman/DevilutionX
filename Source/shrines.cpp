@@ -61,6 +61,26 @@ int ClampU8(int v)
 	return std::clamp(v, 0, 255);
 }
 
+bool ShrineUsePlayerAsCaster(Player &player, const ShrineData &shrineData)
+{
+	const ShrineAffectsPlayer incompatibleAffects = (&player != MyPlayer) ? ShrineAffectsPlayer::Activator : ShrineAffectsPlayer::Others;
+	return shrineData.shrineAffectsPlayer != incompatibleAffects && player.plractive && player.isOnActiveLevel() && !player._pLvlChanging && !player.hasNoLife();
+}
+
+int AffectsPlayer(Player &player, const ShrineData &shrineData)
+{
+	if (&player != MyPlayer) {
+		if (shrineData.shrineAffectsPlayer == ShrineAffectsPlayer::Activator) {
+			return 2;
+		}
+	} else {
+		if (shrineData.shrineAffectsPlayer == ShrineAffectsPlayer::Others) {
+			return 1;
+		}
+	}
+	return -1;
+}
+
 /**
  * @brief Fully restores life and/or mana if configured in shrineOperateFlags and returns true if it was done
  * @param player Player who should have it's life/mana restored
@@ -92,39 +112,34 @@ mienemy_type SpellTarget(const ShrineData &shrineData)
 
 } // namespace
 
-int OperateShrineMysterious(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineMysterious(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	const int randomAttributeChange = shrineData.powerParam1;
 	const int otherAttributesChange = shrineData.powerParam2;
 
-	ModifyPlrStr(player, otherAttributesChange);
-	ModifyPlrMag(player, otherAttributesChange);
-	ModifyPlrDex(player, otherAttributesChange);
-	ModifyPlrVit(player, otherAttributesChange);
+	const int r = rng.generateRnd(4);
 
-	switch (static_cast<CharacterAttribute>(rng.generateRnd(4))) {
-	case CharacterAttribute::Strength:
-		ModifyPlrStr(player, randomAttributeChange - otherAttributesChange);
-		break;
-	case CharacterAttribute::Magic:
-		ModifyPlrMag(player, randomAttributeChange - otherAttributesChange);
-		break;
-	case CharacterAttribute::Dexterity:
-		ModifyPlrDex(player, randomAttributeChange - otherAttributesChange);
-		break;
-	case CharacterAttribute::Vitality:
-		ModifyPlrVit(player, randomAttributeChange - otherAttributesChange);
-		break;
-	}
+	const int v1 = r == 0 ? randomAttributeChange : otherAttributesChange;
+	const int v2 = r == 1 ? randomAttributeChange : otherAttributesChange;
+	const int v3 = r == 2 ? randomAttributeChange : otherAttributesChange;
+	const int v4 = r == 3 ? randomAttributeChange : otherAttributesChange;
+
+	ModifyPlrStr(player, v1);
+	ModifyPlrMag(player, v2);
+	ModifyPlrDex(player, v3);
+	ModifyPlrVit(player, v4);
 
 	CheckStats(player);
 	CalcPlrInv(player, true);
 	CheckRestoreLifeMana(player, shrineData);
 	RedrawEverything();
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -136,65 +151,68 @@ int OperateShrineMysterious(DiabloGenerator &rng, Player &player, Point spawnPos
  * @param shrineData.powerParam2 Durability change for the rest of the items
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineHidden(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineHidden(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
-
 	const int randomItemDurabilityChange = shrineData.powerParam1;
 	const int otherItemsDurabilityChange = shrineData.powerParam2;
 
-	int cnt = 0;
-	for (const auto &item : player.InvBody) {
-		if (!item.isEmpty())
-			cnt++;
-	}
-	if (cnt > 0) {
-		for (auto &item : player.InvBody) {
-			if (!item.isEmpty()
-			    && item._iMaxDur != DUR_INDESTRUCTIBLE
-			    && item._iMaxDur != 0) {
-				item._iDurability += otherItemsDurabilityChange;
-				item._iMaxDur += otherItemsDurabilityChange;
-				if (item._iDurability > item._iMaxDur)
-					item._iDurability = item._iMaxDur;
-				if (item._iDurability <= 0)
-					item._iDurability = 1;
-				if (item._iMaxDur <= 0)
-					item._iMaxDur = 1;
-				// TODO: Check if here it should clamp the max durability so the item doesn't become indestructible
-			}
+	for (Player &player : Players) {
+		
+		if (AffectsPlayer(operatePlayer, shrineData) >= 0) {
+			continue;
 		}
-		while (true) {
-			cnt = 0;
+
+		int cnt = 0;
+		for (const auto &item : player.InvBody) {
+			if (!item.isEmpty())
+				cnt++;
+		}
+		if (cnt > 0) {
 			for (auto &item : player.InvBody) {
-				if (!item.isEmpty() && item._iMaxDur != DUR_INDESTRUCTIBLE && item._iMaxDur != 0) {
-					cnt++;
+				if (!item.isEmpty()
+					&& item._iMaxDur != DUR_INDESTRUCTIBLE
+					&& item._iMaxDur != 0) {
+					item._iDurability += otherItemsDurabilityChange;
+					item._iMaxDur += otherItemsDurabilityChange;
+					item._iDurability = std::clamp(item._iDurability, 1, item._iMaxDur);
+					// TODO: Check if here it should clamp the max durability so the item doesn't become indestructible
+					item._iMaxDur = std::max(item._iMaxDur, 1);
+					// item._iMaxDur = std::clamp(item._iMaxDur, 1, DUR_INDESTRUCTIBLE - 1);
 				}
 			}
-			if (cnt == 0)
-				break;
-			const int r = rng.generateRnd(NUM_INVLOC);
-			if (player.InvBody[r].isEmpty() || player.InvBody[r]._iMaxDur == DUR_INDESTRUCTIBLE || player.InvBody[r]._iMaxDur == 0)
-				continue;
+			while (true) {
+				cnt = 0;
+				for (auto &item : player.InvBody) {
+					if (!item.isEmpty() && item._iMaxDur != DUR_INDESTRUCTIBLE && item._iMaxDur != 0) {
+						cnt++;
+					}
+				}
+				if (cnt == 0)
+					break;
+				const int r = rng.generateRnd(NUM_INVLOC);
+				if (player.InvBody[r].isEmpty() || player.InvBody[r]._iMaxDur == DUR_INDESTRUCTIBLE || player.InvBody[r]._iMaxDur == 0)
+					continue;
 
-			player.InvBody[r]._iDurability += (randomItemDurabilityChange - otherItemsDurabilityChange);
-			player.InvBody[r]._iMaxDur += (randomItemDurabilityChange - otherItemsDurabilityChange);
-			if (player.InvBody[r]._iDurability > player.InvBody[r]._iMaxDur)
-				player.InvBody[r]._iDurability = player.InvBody[r]._iMaxDur;
-			if (player.InvBody[r]._iDurability <= 0)
-				player.InvBody[r]._iDurability = 1;
-			if (player.InvBody[r]._iMaxDur <= 0)
-				player.InvBody[r]._iMaxDur = 1;
-			// TODO: Check if here it should clamp the max durability so the item doesn't become indestructible
-			break;
+				player.InvBody[r]._iDurability += (randomItemDurabilityChange - otherItemsDurabilityChange);
+				player.InvBody[r]._iMaxDur += (randomItemDurabilityChange - otherItemsDurabilityChange);
+				player.InvBody[r]._iDurability = std::clamp(player.InvBody[r]._iDurability, 1, player.InvBody[r]._iMaxDur);
+				// TODO: Check if here it should clamp the max durability so the item doesn't become indestructible
+				player.InvBody[r]._iMaxDur = std::max(player.InvBody[r]._iMaxDur, 1);
+				// player.InvBody[r]._iMaxDur = std::clamp(player.InvBody[r]._iMaxDur, 1, DUR_INDESTRUCTIBLE - 1);
+				break;
+			}
 		}
+		CalcPlrInv(player, true);
+	}
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
 	}
 
-	if (CheckRestoreLifeMana(player, shrineData)) {
+	if (CheckRestoreLifeMana(*MyPlayer, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -207,43 +225,52 @@ int OperateShrineHidden(DiabloGenerator &rng, Player &player, Point spawnPositio
  * @param shrineData.powerParam2 Change to items max damage
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineGloomy(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineGloomy(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
-
 	const int itemsDurabilityChange = shrineData.powerParam1;
 	const int itemsMaxDamChange = shrineData.powerParam2;
 
-	for (Item &item : PlayerItemsRange(player)) {
-		switch (item._itype) {
-		case ItemType::Sword:
-		case ItemType::Axe:
-		case ItemType::Bow:
-		case ItemType::Mace:
-		case ItemType::Staff: {
-			const int minDam = static_cast<int>(item._iMinDam);
-			const int maxDam = static_cast<int>(item._iMaxDam);
-			const int newMax = std::max(maxDam + itemsMaxDamChange, minDam);
-			item._iMaxDam = static_cast<uint8_t>(ClampU8(newMax));
-		} break;
-		case ItemType::Shield:
-		case ItemType::Helm:
-		case ItemType::LightArmor:
-		case ItemType::MediumArmor:
-		case ItemType::HeavyArmor:
-			item._iAC = ClampU8(item._iAC + itemsDurabilityChange);
-			break;
-		default:
-			break;
+	for (Player &player : Players) {
+
+		if (AffectsPlayer(operatePlayer, shrineData) >= 0) {
+			continue;
 		}
+
+		for (Item &item : PlayerItemsRange(player)) {
+			switch (item._itype) {
+			case ItemType::Sword:
+			case ItemType::Axe:
+			case ItemType::Bow:
+			case ItemType::Mace:
+			case ItemType::Staff: {
+				const int minDam = static_cast<int>(item._iMinDam);
+				const int maxDam = static_cast<int>(item._iMaxDam);
+				const int newMax = std::max(maxDam + itemsMaxDamChange, minDam);
+				item._iMaxDam = static_cast<uint8_t>(ClampU8(newMax));
+			} break;
+			case ItemType::Shield:
+			case ItemType::Helm:
+			case ItemType::LightArmor:
+			case ItemType::MediumArmor:
+			case ItemType::HeavyArmor:
+				item._iAC = ClampU8(item._iAC + itemsDurabilityChange);
+				break;
+			default:
+				break;
+			}
+		}
+		CalcPlrInv(player, true);
+	}
+	
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
 	}
 
-	CalcPlrInv(player, true);
-	if (CheckRestoreLifeMana(player, shrineData)) {
+	if (CheckRestoreLifeMana(*MyPlayer, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -256,11 +283,8 @@ int OperateShrineGloomy(DiabloGenerator &rng, Player &player, Point spawnPositio
  * @param shrineData.powerParam2 Change to items max damage
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineWeird(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineWeird(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
-
 	auto isWeapon = [](const Item &item) {
 		switch (item._itype) {
 		case ItemType::Sword:
@@ -287,24 +311,36 @@ int OperateShrineWeird(DiabloGenerator &rng, Player &player, Point spawnPosition
 		item._iMaxDam = ClampU8(std::max(maxDamChanged, minDamChanged));
 	};
 
-	Item &left = player.InvBody[INVLOC_HAND_LEFT];
-	if (!left.isEmpty() && left._itype != ItemType::Shield)
-		bumpDam(left);
+	for (Player &player : Players) {
 
-	Item &right = player.InvBody[INVLOC_HAND_RIGHT];
-	if (!right.isEmpty() && right._itype != ItemType::Shield)
-		bumpDam(right);
+		if (AffectsPlayer(operatePlayer, shrineData) >= 0) {
+			continue;
+		}
 
-	for (Item &item : InventoryPlayerItemsRange { player }) {
-		if (isWeapon(item))
-			bumpDam(item);
+		Item &left = player.InvBody[INVLOC_HAND_LEFT];
+		if (!left.isEmpty() && left._itype != ItemType::Shield)
+			bumpDam(left);
+
+		Item &right = player.InvBody[INVLOC_HAND_RIGHT];
+		if (!right.isEmpty() && right._itype != ItemType::Shield)
+			bumpDam(right);
+
+		for (Item &item : InventoryPlayerItemsRange { player }) {
+			if (isWeapon(item))
+				bumpDam(item);
+		}
+		CalcPlrInv(player, true);
 	}
 
-	CalcPlrInv(player, true);
-	if (CheckRestoreLifeMana(player, shrineData)) {
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+
+	if (CheckRestoreLifeMana(*MyPlayer, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -317,7 +353,7 @@ int OperateShrineWeird(DiabloGenerator &rng, Player &player, Point spawnPosition
  * @param shrineData.spell Spell to cast
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineCastSpellPlayerPosition(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineCastSpellPlayerPosition(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
 	const SpellID spellId = shrineData.spell;
 
@@ -327,26 +363,33 @@ int OperateShrineCastSpellPlayerPosition(DiabloGenerator &rng, Player &player, P
 		const int spellAdd = shrineData.powerParam2;
 		const SpellData &spellData = GetSpellData(spellId);
 
-		for (size_t i = 0; i < sizeof(spellData.sMissiles) / sizeof(spellData.sMissiles[0]) && spellData.sMissiles[i] != MissileID::Null; i++) {
-			AddMissile(
-			    player.position.tile,
-			    player.position.tile,
-			    player._pdir,
-			    spellData.sMissiles[i],
-			    SpellTarget(shrineData),
-			    player,
-			    0,
-			    (spellMultiplier * leveltype) + spellAdd);
+		for (Player &player : Players) {
+			if (!ShrineUsePlayerAsCaster(player, shrineData))
+				continue;
+
+			for (size_t i = 0; i < sizeof(spellData.sMissiles) / sizeof(spellData.sMissiles[0]) && spellData.sMissiles[i] != MissileID::Null; i++) {
+				AddMissile(
+				    player.position.tile,
+				    player.position.tile,
+				    player._pdir,
+				    spellData.sMissiles[i],
+				    SpellTarget(shrineData),
+				    player,
+				    0,
+				    (spellMultiplier * leveltype) + spellAdd);
+			}
 		}
 	}
 
-	if (&player != MyPlayer)
-		return 0;
-
-	if (CheckRestoreLifeMana(player, shrineData)) {
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	
+	if (CheckRestoreLifeMana(*MyPlayer, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -356,20 +399,29 @@ int OperateShrineCastSpellPlayerPosition(DiabloGenerator &rng, Player &player, P
  * @param spawnPosition Unused
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineStone(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineStone(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	for (Player &player : Players) {
 
-	for (Item &item : PlayerItemsRange { player }) {
-		if (item._itype == ItemType::Staff)
-			item._iCharges = item._iMaxCharges;
+		if (AffectsPlayer(operatePlayer, shrineData) >= 0) {
+			continue;
+		}
+
+		for (Item &item : PlayerItemsRange { player }) {
+			if (item._itype == ItemType::Staff)
+				item._iCharges = item._iMaxCharges;
+		}
+		CalcPlrInv(player, true);
 	}
 
-	CalcPlrInv(player, true);
-	CheckRestoreLifeMana(player, shrineData);
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+
+	CheckRestoreLifeMana(*MyPlayer, shrineData);
 	RedrawEverything();
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -379,19 +431,28 @@ int OperateShrineStone(DiabloGenerator &rng, Player &player, Point spawnPosition
  * @param spawnPosition Unused
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineReligious(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineReligious(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	for (Player &player : Players) {
 
-	for (Item &item : PlayerItemsRange { player }) {
-		item._iDurability = item._iMaxDur;
+		if (AffectsPlayer(operatePlayer, shrineData) >= 0) {
+			continue;
+		}
+
+		for (Item &item : PlayerItemsRange { player }) {
+			item._iDurability = item._iMaxDur;
+		}
 	}
 
-	if (CheckRestoreLifeMana(player, shrineData)) {
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+
+	if (CheckRestoreLifeMana(*MyPlayer, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -403,10 +464,13 @@ int OperateShrineReligious(DiabloGenerator &rng, Player &player, Point spawnPosi
  * @param shrineData.powerParam2 Level change for the rest of the spells
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineEnchanted(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineEnchanted(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	const int randomSpellLevelChange = shrineData.powerParam1;
 	const int otherSpellLevelChange = shrineData.powerParam2;
@@ -428,7 +492,7 @@ int OperateShrineEnchanted(DiabloGenerator &rng, Player &player, Point spawnPosi
 		spell = 1;
 		for (auto j = static_cast<uint8_t>(SpellID::Firebolt); j < SpellsData.size(); j++) {
 			if ((player._pMemSpells & spell) != 0 && player._pSplLvl[j] < MaxSpellLevel && j != spellToReduce) {
-				const auto newSpellLevel = static_cast<uint8_t>(std::clamp(0, player._pSplLvl[j] + randomSpellLevelChange, static_cast<int>(MaxSpellLevel)));
+				const auto newSpellLevel = static_cast<uint8_t>(std::clamp(player._pSplLvl[j] + randomSpellLevelChange, 0, static_cast<int>(MaxSpellLevel)));
 				player._pSplLvl[j] = newSpellLevel;
 				NetSendCmdParam2(true, CMD_CHANGE_SPELL_LEVEL, j, newSpellLevel);
 			}
@@ -436,7 +500,7 @@ int OperateShrineEnchanted(DiabloGenerator &rng, Player &player, Point spawnPosi
 		}
 
 		if (player._pSplLvl[spellToReduce] > 0) {
-			const auto newSpellLevel = static_cast<uint8_t>(std::clamp(0, player._pSplLvl[spellToReduce] + otherSpellLevelChange, static_cast<int>(MaxSpellLevel)));
+			const auto newSpellLevel = static_cast<uint8_t>(std::clamp(player._pSplLvl[spellToReduce] + otherSpellLevelChange, 0, static_cast<int>(MaxSpellLevel)));
 			player._pSplLvl[spellToReduce] = newSpellLevel;
 			NetSendCmdParam2(true, CMD_CHANGE_SPELL_LEVEL, spellToReduce, newSpellLevel);
 		}
@@ -454,7 +518,7 @@ int OperateShrineEnchanted(DiabloGenerator &rng, Player &player, Point spawnPosi
 	if (CheckRestoreLifeMana(player, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -465,7 +529,7 @@ int OperateShrineEnchanted(DiabloGenerator &rng, Player &player, Point spawnPosi
  * @param spawnPosition Unused
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineThaumaturgic(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineThaumaturgic(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
 	for (int j = 0; j < ActiveObjectCount; j++) {
 		Object &object = Objects[ActiveObjects[j]];
@@ -476,13 +540,15 @@ int OperateShrineThaumaturgic(DiabloGenerator &rng, Player &player, Point spawnP
 		}
 	}
 
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
 
-	if (CheckRestoreLifeMana(player, shrineData)) {
+	if (CheckRestoreLifeMana(*MyPlayer, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -496,10 +562,13 @@ int OperateShrineThaumaturgic(DiabloGenerator &rng, Player &player, Point spawnP
  * @param shrineData.spell Spell that will change its value
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineCostOfWisdom(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineCostOfWisdom(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	const int spellLevelChange = shrineData.powerParam1;
 	const int wisdomCost = shrineData.powerParam2;
@@ -513,14 +582,11 @@ int OperateShrineCostOfWisdom(DiabloGenerator &rng, Player &player, Point spawnP
 		NetSendCmdParam2(true, CMD_CHANGE_SPELL_LEVEL, static_cast<uint16_t>(spellId), newSpellLevel);
 	}
 
-	// TODO: Haven't changed this section from previous code but I think this if is always true
-	if (&player == MyPlayer) {
-		for (Item &item : InventoryPlayerItemsRange { player }) {
-			item.updateRequiredStatsCacheForPlayer(player);
-		}
-		if (IsStashOpen) {
-			Stash.RefreshItemStatFlags();
-		}
+	for (Item &item : InventoryPlayerItemsRange { player }) {
+		item.updateRequiredStatsCacheForPlayer(player);
+	}
+	if (IsStashOpen) {
+		Stash.RefreshItemStatFlags();
 	}
 
 	int maxBase = player._pMaxManaBase.raw();
@@ -545,7 +611,7 @@ int OperateShrineCostOfWisdom(DiabloGenerator &rng, Player &player, Point spawnP
 
 	CheckRestoreLifeMana(player, shrineData);
 	RedrawEverything();
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -555,37 +621,46 @@ int OperateShrineCostOfWisdom(DiabloGenerator &rng, Player &player, Point spawnP
  * @param spawnPosition Unused
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineEldritch(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineEldritch(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
 
-	for (Item &item : InventoryAndBeltPlayerItemsRange { player }) {
-		if (item._itype != ItemType::Misc) {
+	for (Player &player : Players) {
+
+		if (AffectsPlayer(operatePlayer, shrineData) >= 0) {
 			continue;
 		}
-		if (IsAnyOf(item._iMiscId, IMISC_HEAL, IMISC_MANA)) {
-			// Reinitializing the item zeroes out the seed, we save and restore here to avoid triggering false
-			// positives on duplicated item checks (e.g. when picking up the item).
-			auto seed = item._iSeed;
-			InitializeItem(item, ItemMiscIdIdx(IMISC_REJUV));
-			item._iSeed = seed;
-			item._iStatFlag = true;
-			continue;
-		}
-		if (IsAnyOf(item._iMiscId, IMISC_FULLHEAL, IMISC_FULLMANA)) {
-			// As above.
-			auto seed = item._iSeed;
-			InitializeItem(item, ItemMiscIdIdx(IMISC_FULLREJUV));
-			item._iSeed = seed;
-			item._iStatFlag = true;
-			continue;
-		}
+		
+		for (Item &item : InventoryAndBeltPlayerItemsRange { player }) {
+			if (item._itype != ItemType::Misc) {
+				continue;
+			}
+			if (IsAnyOf(item._iMiscId, IMISC_HEAL, IMISC_MANA)) {
+				// Reinitializing the item zeroes out the seed, we save and restore here to avoid triggering false
+				// positives on duplicated item checks (e.g. when picking up the item).
+				auto seed = item._iSeed;
+				InitializeItem(item, ItemMiscIdIdx(IMISC_REJUV));
+				item._iSeed = seed;
+				item._iStatFlag = true;
+				continue;
+			}
+			if (IsAnyOf(item._iMiscId, IMISC_FULLHEAL, IMISC_FULLMANA)) {
+				// As above.
+				auto seed = item._iSeed;
+				InitializeItem(item, ItemMiscIdIdx(IMISC_FULLREJUV));
+				item._iSeed = seed;
+				item._iStatFlag = true;
+				continue;
+			}
+}
+	}
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
 	}
 
-	CheckRestoreLifeMana(player, shrineData);
+	CheckRestoreLifeMana(*MyPlayer, shrineData);
 	RedrawEverything();
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -596,17 +671,20 @@ int OperateShrineEldritch(DiabloGenerator &rng, Player &player, Point spawnPosit
  * @param shrineData.powerParam1 Amount to increase the magic attribute
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineEerie(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineEerie(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	ModifyPlrMag(player, shrineData.powerParam1);
 	CheckStats(player);
 	CalcPlrInv(player, true);
 	CheckRestoreLifeMana(player, shrineData);
 	RedrawEverything();
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -618,29 +696,33 @@ int OperateShrineEerie(DiabloGenerator &rng, Player &player, Point spawnPosition
  * @param shrineData.powerParam2 The amoun of potions
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineDivine(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineDivine(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
-
 	const int minDungeonLevelRejuvenation = shrineData.powerParam1;
 	const int numPotions = shrineData.powerParam2;
 
-	if (currlevel < minDungeonLevelRejuvenation) {
-		for (int i = 0; i < numPotions; i++) {
-			const item_misc_id imisc = ((i & 1) == 0) ? IMISC_FULLMANA : IMISC_FULLHEAL;
-			CreateTypeItem(spawnPosition, false, ItemType::Misc, imisc, false, false, true);
-		}
-	} else {
-		for (int i = 0; i < numPotions; i++) {
-			CreateTypeItem(spawnPosition, false, ItemType::Misc, IMISC_FULLREJUV, false, false, true);
+	if (&operatePlayer == MyPlayer) {
+		// Only spawn potions once even if the shrine affects not only the interacting one
+		if (currlevel < minDungeonLevelRejuvenation) {
+			for (int i = 0; i < numPotions; i++) {
+				const item_misc_id imisc = ((i & 1) == 0) ? IMISC_FULLMANA : IMISC_FULLHEAL;
+				CreateTypeItem(spawnPosition, false, ItemType::Misc, imisc, false, false, true);
+			}
+		} else {
+			for (int i = 0; i < numPotions; i++) {
+				CreateTypeItem(spawnPosition, false, ItemType::Misc, IMISC_FULLREJUV, false, false, true);
+			}
 		}
 	}
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	};
 
-	if (CheckRestoreLifeMana(player, shrineData)) {
+	if (CheckRestoreLifeMana(*MyPlayer, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -652,7 +734,7 @@ int OperateShrineDivine(DiabloGenerator &rng, Player &player, Point spawnPositio
  * @param shrineData.powerParam2 Spell level add to dungeon level
  * @param shrineData.spell Spell to cast
  */
-int OperateShrineCastSpellDestinyZero(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineCastSpellDestinyZero(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
 	const SpellID spellId = shrineData.spell;
 
@@ -662,25 +744,33 @@ int OperateShrineCastSpellDestinyZero(DiabloGenerator &rng, Player &player, Poin
 		const int spellAdd = shrineData.powerParam2;
 		const SpellData &spellData = GetSpellData(spellId);
 
-		for (size_t i = 0; i < sizeof(spellData.sMissiles) / sizeof(spellData.sMissiles[0]) && spellData.sMissiles[i] != MissileID::Null; i++) {
-			AddMissile(
-			    player.position.tile,
-			    { 0, 0 },
-			    Direction::South,
-			    spellData.sMissiles[i],
-			    SpellTarget(shrineData), player,
-			    0,
-			    (spellMultiplier * leveltype) + spellAdd);
+		for (Player &player : Players) {
+			if (!ShrineUsePlayerAsCaster(player, shrineData))
+				continue;
+
+			for (size_t i = 0; i < sizeof(spellData.sMissiles) / sizeof(spellData.sMissiles[0]) && spellData.sMissiles[i] != MissileID::Null; i++) {
+				AddMissile(
+				    player.position.tile,
+				    { 0, 0 },
+				    Direction::South,
+				    spellData.sMissiles[i],
+				    SpellTarget(shrineData), player,
+				    0,
+				    (spellMultiplier * leveltype) + spellAdd);
+			}
 		}
 	}
 
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	if (CheckRestoreLifeMana(player, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -692,29 +782,38 @@ int OperateShrineCastSpellDestinyZero(DiabloGenerator &rng, Player &player, Poin
  * @param shrineData.powerParam2 Second multiplier of gold per dungeon level
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineSpiritual(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineSpiritual(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
-
 	const int goldMultiplier1 = shrineData.powerParam1;
 	const int goldMultiplier2 = shrineData.powerParam2;
 
-	for (int8_t &itemIndex : player.InvGrid) {
-		if (itemIndex == 0) {
-			Item &goldItem = player.InvList[player._pNumInv];
-			MakeGoldStack(goldItem, (goldMultiplier1 * leveltype) + rng.generateRnd(goldMultiplier2 * leveltype));
-			player._pNumInv++;
-			itemIndex = player._pNumInv;
+	for (Player &player : Players) {
 
-			player._pGold += goldItem._ivalue;
+		if (AffectsPlayer(operatePlayer, shrineData) >= 0) {
+			continue;
+		}
+
+		for (int8_t &itemIndex : player.InvGrid) {
+			if (itemIndex == 0) {
+				Item &goldItem = player.InvList[player._pNumInv];
+				MakeGoldStack(goldItem, (goldMultiplier1 * leveltype) + rng.generateRnd(goldMultiplier2 * leveltype));
+				player._pNumInv++;
+				itemIndex = player._pNumInv;
+
+				player._pGold += goldItem._ivalue;
+			}
 		}
 	}
 
-	if (CheckRestoreLifeMana(player, shrineData)) {
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+
+	if (CheckRestoreLifeMana(*MyPlayer, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -724,16 +823,17 @@ int OperateShrineSpiritual(DiabloGenerator &rng, Player &player, Point spawnPosi
  * @param spawnPosition Unused
  * @return 1 (normal message) if the player is the active player, 2 (blessed message) otherwise
  */
-int OperateShrineSpooky(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineSpooky(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player == MyPlayer) {
-		return 1;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
 	}
 
 	if (CheckRestoreLifeMana(*MyPlayer, shrineData)) {
 		RedrawEverything();
 	}
-	return 2;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -744,17 +844,20 @@ int OperateShrineSpooky(DiabloGenerator &rng, Player &player, Point spawnPositio
  * @param shrineData.powerParam1 Amount to increase the dexterity attribute
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineAbandoned(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineAbandoned(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	ModifyPlrDex(player, shrineData.powerParam1);
 	CheckStats(player);
 	CalcPlrInv(player, true);
 	CheckRestoreLifeMana(player, shrineData);
 	RedrawEverything();
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -765,17 +868,20 @@ int OperateShrineAbandoned(DiabloGenerator &rng, Player &player, Point spawnPosi
  * @param shrineData.powerParam1 Amount to increase the strength attribute
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineCreepy(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineCreepy(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	ModifyPlrStr(player, shrineData.powerParam1);
 	CheckStats(player);
 	CalcPlrInv(player, true);
 	CheckRestoreLifeMana(player, shrineData);
 	RedrawEverything();
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -786,17 +892,20 @@ int OperateShrineCreepy(DiabloGenerator &rng, Player &player, Point spawnPositio
  * @param shrineData.powerParam1 Amount to increase the vitality attribute
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineQuiet(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineQuiet(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	ModifyPlrVit(player, shrineData.powerParam1);
 	CheckStats(player);
 	CalcPlrInv(player, true);
 	CheckRestoreLifeMana(player, shrineData);
 	RedrawEverything();
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -806,18 +915,21 @@ int OperateShrineQuiet(DiabloGenerator &rng, Player &player, Point spawnPosition
  * @param spawnPosition Unused
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineSecluded(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineSecluded(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
 
 	for (int x = 0; x < DMAXX; x++)
 		for (int y = 0; y < DMAXY; y++)
 			UpdateAutomapExplorer({ x, y }, MAP_EXP_SHRINE);
-	if (CheckRestoreLifeMana(player, shrineData)) {
+
+	if (CheckRestoreLifeMana(*MyPlayer, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -827,60 +939,29 @@ int OperateShrineSecluded(DiabloGenerator &rng, Player &player, Point spawnPosit
  * @param spawnPosition Unused
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineGlimmering(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineGlimmering(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	for (Player &player : Players) {
 
-	for (Item &item : PlayerItemsRange { player }) {
-		if (item._iMagical != ITEM_QUALITY_NORMAL && !item._iIdentified) {
-			item._iIdentified = true;
+		if (AffectsPlayer(operatePlayer, shrineData) >= 0) {
+			continue;
 		}
+
+		for (Item &item : PlayerItemsRange { player }) {
+			if (item._iMagical != ITEM_QUALITY_NORMAL && !item._iIdentified) {
+				item._iIdentified = true;
+			}
+		}
+		CalcPlrInv(player, true);
 	}
 
-	CalcPlrInv(player, true);
-	CheckRestoreLifeMana(player, shrineData);
+	CheckRestoreLifeMana(*MyPlayer, shrineData);
 	RedrawEverything();
-	return 1;
-}
-
-/**
- * @brief No effect for the player who activated the shrine, the other players gets a random attribute modified using first value and the rest with the second value
- * @param rng random number generator
- * @param player The player that activated the shrine
- * @param spawnPosition Unused
- * @param shrineData.powerParam1 Value to change a random attribute
- * @param shrineData.powerParam2 Value to change the rest of the attributes
- * @return 1 (normal message) if the player is the active player, 2 (cursed message) otherwise
- */
-int OperateShrineTainted(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
-{
-	if (&player == MyPlayer) {
-		return 1;
-	}
-
-	const int randomAttributeChange = shrineData.powerParam1;
-	const int otherAttributesChange = shrineData.powerParam2;
-
-	const int r = rng.generateRnd(4);
-
-	const int v1 = r == 0 ? randomAttributeChange : otherAttributesChange;
-	const int v2 = r == 1 ? randomAttributeChange : otherAttributesChange;
-	const int v3 = r == 2 ? randomAttributeChange : otherAttributesChange;
-	const int v4 = r == 3 ? randomAttributeChange : otherAttributesChange;
-
-	Player &myPlayer = *MyPlayer;
-
-	ModifyPlrStr(myPlayer, v1);
-	ModifyPlrMag(myPlayer, v2);
-	ModifyPlrDex(myPlayer, v3);
-	ModifyPlrVit(myPlayer, v4);
-
-	CheckStats(myPlayer);
-	CalcPlrInv(myPlayer, true);
-	CheckRestoreLifeMana(myPlayer, shrineData);
-	RedrawEverything();
-	return 2;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -894,10 +975,13 @@ int OperateShrineTainted(DiabloGenerator &rng, Player &player, Point spawnPositi
  * @param shrineData.spell Spell to cast at the shrine location
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineOily(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineOily(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	const int totalAttributesChange = shrineData.powerParam1;
 	const int secondaryAttributeChange = shrineData.powerParam2;
@@ -942,7 +1026,7 @@ int OperateShrineOily(DiabloGenerator &rng, Player &player, Point spawnPosition,
 	    (2 * currlevel) + 2,
 	    0);
 
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -954,10 +1038,13 @@ int OperateShrineOily(DiabloGenerator &rng, Player &player, Point spawnPosition,
  * @param shrineData.powerParam2 Fraction of experience lost
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineGlowing(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineGlowing(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	const int magicAttributesChange = shrineData.powerParam1;
 	const int experienceLossFraction = shrineData.powerParam2;
@@ -974,7 +1061,7 @@ int OperateShrineGlowing(DiabloGenerator &rng, Player &player, Point spawnPositi
 	CheckStats(player);
 	CheckRestoreLifeMana(player, shrineData);
 	RedrawEverything();
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -986,10 +1073,13 @@ int OperateShrineGlowing(DiabloGenerator &rng, Player &player, Point spawnPositi
  * @param shrineData.powerParam2 Experience gained for each gold unit
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineMendicant(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineMendicant(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	const int goldLossPercent = shrineData.powerParam1;
 	const int experienceGainedPerGold = shrineData.powerParam2;
@@ -1000,7 +1090,7 @@ int OperateShrineMendicant(DiabloGenerator &rng, Player &player, Point spawnPosi
 
 	CheckRestoreLifeMana(player, shrineData);
 	RedrawEverything();
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -1012,29 +1102,33 @@ int OperateShrineMendicant(DiabloGenerator &rng, Player &player, Point spawnPosi
  * @param shrineData.powerParam2 Flash spell damage multiplier per dungeon level
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineSparkling(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineSparkling(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
 
 	const int experiencePerLevel = shrineData.powerParam1;
 	const int spellDamageMultiplier = shrineData.powerParam2;
 
-	player.addExperience(experiencePerLevel * currlevel);
-
 	AddMissile(
-	    spawnPosition,
-	    player.position.tile,
-	    player._pdir,
-	    MissileID::FlashBottom,
-	    SpellTarget(shrineData),
-	    -1,
-	    (spellDamageMultiplier * currlevel) + 2,
-	    0);
+			spawnPosition,
+			operatePlayer.position.tile,
+			operatePlayer._pdir,
+			MissileID::FlashBottom,
+			SpellTarget(shrineData),
+			-1,
+			(spellDamageMultiplier * currlevel) + 2,
+			0);
+
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
+
+	player.addExperience(experiencePerLevel * currlevel);
 
 	CheckRestoreLifeMana(player, shrineData);
 	RedrawEverything();
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -1047,10 +1141,12 @@ int OperateShrineSparkling(DiabloGenerator &rng, Player &player, Point spawnPosi
  * @param shrineData.spell Spell to cast
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineCastSpellShrinePosition(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineCastSpellShrinePosition(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
 
 	const SpellID spellId = shrineData.spell;
 
@@ -1060,23 +1156,29 @@ int OperateShrineCastSpellShrinePosition(DiabloGenerator &rng, Player &player, P
 		const int spellAdd = shrineData.powerParam2;
 		const SpellData &spellData = GetSpellData(spellId);
 
-		for (size_t i = 0; i < sizeof(spellData.sMissiles) / sizeof(spellData.sMissiles[0]) && spellData.sMissiles[i] != MissileID::Null; i++) {
-			AddMissile(
-			    spawnPosition,
-			    player.position.tile,
-			    player._pdir,
-			    spellData.sMissiles[i],
-			    SpellTarget(shrineData),
-			    player,
-			    0,
-			    (spellMultiplier * leveltype) + spellAdd);
+		for (Player &player : Players) {
+			if (!ShrineUsePlayerAsCaster(player, shrineData))
+				continue;
+
+			for (size_t i = 0; i < sizeof(spellData.sMissiles) / sizeof(spellData.sMissiles[0]) && spellData.sMissiles[i] != MissileID::Null; i++) {
+				AddMissile(
+				    spawnPosition,
+				    player.position.tile,
+				    player._pdir,
+				    spellData.sMissiles[i],
+				    SpellTarget(shrineData),
+				    player,
+				    0,
+				    (spellMultiplier * leveltype) + spellAdd);
+			}
 		}
 	}
+	Player &player = *MyPlayer;
 
 	if (CheckRestoreLifeMana(player, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -1086,14 +1188,17 @@ int OperateShrineCastSpellShrinePosition(DiabloGenerator &rng, Player &player, P
  * @param spawnPosition The position of the shrine, the portal will be placed on the side closest to the player
  * @return 1 (normal message) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineShimmering(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineShimmering(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	CheckRestoreLifeMana(player, shrineData);
 	RedrawEverything();
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 /**
@@ -1104,10 +1209,13 @@ int OperateShrineShimmering(DiabloGenerator &rng, Player &player, Point spawnPos
  * @param shrineData.powerParam1 Amount to increase the attribute
  * @return 1 - 4 (depending ont the hour) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineSolar(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineSolar(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+	Player &player = *MyPlayer;
 
 	const int attributeChange = shrineData.powerParam1;
 
@@ -1145,34 +1253,44 @@ int OperateShrineSolar(DiabloGenerator &rng, Player &player, Point spawnPosition
  * @param shrineData.powerParam2 Fraction of gold to take away if no item is selected
  * @return 1 - 4 (depending ont the hour) if the player is the active player, 0 (no message) otherwise
  */
-int OperateShrineMurphys(DiabloGenerator &rng, Player &player, Point spawnPosition, const ShrineData &shrineData)
+int OperateShrineMurphys(DiabloGenerator &rng, Player &operatePlayer, Point spawnPosition, const ShrineData &shrineData)
 {
-	if (&player != MyPlayer)
-		return 0;
-
 	const int durabilityPercentLoss = shrineData.powerParam1;
 	const int goldLossFraction = shrineData.powerParam2;
 
-	bool broke = false;
-	for (auto &item : player.InvBody) {
-		if (!item.isEmpty() && rng.flipCoin(3)) {
-			if (item._iDurability != DUR_INDESTRUCTIBLE) {
+	for (Player &player : Players) {
+
+		if (AffectsPlayer(operatePlayer, shrineData) >= 0) {
+			continue;
+		}
+
+		bool broke = false;
+		for (auto &item : player.InvBody) {
+			if (!item.isEmpty() && rng.flipCoin(3)) {
+				if (item._iDurability == DUR_INDESTRUCTIBLE) {
+					continue;
+				}
 				if (item._iDurability > 0) {
-					item._iDurability = item._iDurability * durabilityPercentLoss / 100;
-					broke = true;
-					break;
+						item._iDurability = item._iDurability * durabilityPercentLoss / 100;
+						broke = true;
+						break;
 				}
 			}
 		}
-	}
-	if (!broke) {
-		TakePlrsMoney((goldLossFraction > 1) ? player._pGold / goldLossFraction : player._pGold);
+		if (!broke) {
+			TakePlrsMoney((goldLossFraction > 1) ? player._pGold / goldLossFraction : player._pGold);
+		}
 	}
 
-	if (CheckRestoreLifeMana(player, shrineData)) {
+	const int inmediateExitMessage = AffectsPlayer(operatePlayer, shrineData);
+	if (inmediateExitMessage >= 0) {
+		return inmediateExitMessage;
+	}
+
+	if (CheckRestoreLifeMana(*MyPlayer, shrineData)) {
 		RedrawEverything();
 	}
-	return 1;
+	return (&operatePlayer == MyPlayer) ? 1 : 2;
 }
 
 } // namespace devilution

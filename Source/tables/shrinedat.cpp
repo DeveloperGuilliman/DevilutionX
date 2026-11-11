@@ -48,7 +48,6 @@ ParseShrineOperateFn(std::string_view value)
 	if (value == "OperateShrineQuiet") return OperateShrineQuiet;
 	if (value == "OperateShrineSecluded") return OperateShrineSecluded;
 	if (value == "OperateShrineGlimmering") return OperateShrineGlimmering;
-	if (value == "OperateShrineTainted") return OperateShrineTainted;
 	if (value == "OperateShrineOily") return OperateShrineOily;
 	if (value == "OperateShrineGlowing") return OperateShrineGlowing;
 	if (value == "OperateShrineMendicant") return OperateShrineMendicant;
@@ -65,6 +64,14 @@ std::expected<ShrineGametype, std::string> ParseShrineGameType(std::string_view 
 	if (value == "Any") return ShrineGametype::ShrineTypeAny;
 	if (value == "Single") return ShrineGametype::ShrineTypeSingle;
 	if (value == "Multi") return ShrineGametype::ShrineTypeMulti;
+	return std::unexpected("Unknown shrine game type");
+}
+
+std::expected<ShrineAffectsPlayer, std::string> ParseShrineAffectsPlayer(std::string_view value)
+{
+	if (value == "Activator") return ShrineAffectsPlayer::Activator;
+	if (value == "Others") return ShrineAffectsPlayer::Others;
+	if (value == "All") return ShrineAffectsPlayer::All;
 	return std::unexpected("Unknown shrine game type");
 }
 
@@ -101,6 +108,7 @@ void LoadShrineData()
 		reader.read("gameType", entry.gameType, ParseShrineGameType);
 		reader.read("minLevelType", entry.minLevelType, ParseDungeonType);
 		reader.read("maxLevelType", entry.maxLevelType, ParseDungeonType);
+		reader.read("shrineAffectsPlayer", entry.shrineAffectsPlayer, ParseShrineAffectsPlayer);
 		reader.readEnumList("shrineOperateFlags", entry.shrineOperateFlags, ParseShrineOperateFlag);
 		reader.readString("message", entry.message);
 		reader.readString("message2", entry.message2);

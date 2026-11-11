@@ -19,6 +19,12 @@ enum class ShrineGametype : uint8_t {
 	ShrineTypeMulti,
 };
 
+enum class ShrineAffectsPlayer : uint8_t {
+	Activator,
+	Others,
+	All,
+};
+
 enum class ShrineOperateFlag : uint8_t {
 	// clang-format off
 	None = 0,
@@ -38,10 +44,6 @@ struct ShrineData {
 	using OperateFn = int (*)(DiabloGenerator &, Player &, Point, const ShrineData &);
 
 	std::string name;
-	std::string message;
-	std::string message2;
-	std::string message3;
-	std::string message4;
 	OperateFn operateFn;
 	int powerParam1;
 	int powerParam2;
@@ -49,7 +51,12 @@ struct ShrineData {
 	ShrineGametype gameType;
 	dungeon_type minLevelType;
 	dungeon_type maxLevelType;
+	ShrineAffectsPlayer shrineAffectsPlayer;
 	ShrineOperateFlag shrineOperateFlags;
+	std::string message;
+	std::string message2;
+	std::string message3;
+	std::string message4;
 };
 
 extern std::vector<ShrineData> ShrinesData;
