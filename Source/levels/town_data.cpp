@@ -21,9 +21,9 @@ TownRegistry &GetTownRegistry()
 const TownConfig *GetCurrentTownConfig()
 {
 	const TownRegistry &registry = GetTownRegistry();
-	const std::string &id = registry.GetCurrentTown();
-	if (!id.empty() && registry.HasTown(id))
-		return &registry.GetTown(id);
+	const std::optional<uint8_t> townId = registry.GetCurrentTown();
+	if (townId.has_value() && registry.HasTown(*townId))
+		return &registry.GetTown(*townId);
 	return nullptr;
 }
 
@@ -35,49 +35,38 @@ const TownConfig &GetActiveTownConfigForTileLoad()
 	return GetTownRegistry().GetTown(TristramTownId);
 }
 
-void TownRegistry::RegisterTown(const std::string &id, const TownConfig &config)
+void TownRegistry::RegisterTown(const TownConfig &config)
 {
-	if (HasTown(id))
-		LogWarn("RegisterTown: overwriting existing town '{}'", id);
-	towns[id] = config;
-	LogInfo("Registered town: {}", id);
+	const auto existing = towns.find(config.townId);
+	if (existing != towns.end())
+		LogWarn("RegisterTown: overwriting town {} ({})", config.townId, existing->second.name);
+	towns.insert_or_assign(config.townId, config);
+	LogInfo("Registered town {} ({})", config.townId, config.name);
 }
 
-const TownConfig &TownRegistry::GetTown(const std::string &id) const
+const TownConfig &TownRegistry::GetTown(uint8_t townId) const
 {
-	return towns.at(id);
+	return towns.at(townId);
 }
 
-TownConfig &TownRegistry::GetTown(const std::string &id)
+TownConfig &TownRegistry::GetTown(uint8_t townId)
 {
-	return towns.at(id);
+	return towns.at(townId);
 }
 
-bool TownRegistry::HasTown(const std::string &id) const
+bool TownRegistry::HasTown(uint8_t townId) const
 {
-	return towns.count(id) > 0;
+	return towns.contains(townId);
 }
 
-void TownRegistry::SetCurrentTown(const std::string &id)
+void TownRegistry::SetCurrentTown(uint8_t townId)
 {
-	currentTownID = id;
+	currentTownId = townId;
 }
 
-const std::string &TownRegistry::GetCurrentTown() const
+const std::optional<uint8_t> &TownRegistry::GetCurrentTown() const
 {
-	return currentTownID;
-}
-
-std::string TownRegistry::GetTownBySaveId(uint8_t saveId) const
-{
-	for (const auto &[id, config] : towns) {
-		if (config.saveId == saveId) {
-			return id;
-		}
-	}
-	if (saveId != 0)
-		LogWarn("GetTownBySaveId: unknown saveId {}, defaulting to Tristram", saveId);
-	return { TristramTownId };
+	return currentTownId;
 }
 
 Point GetPortalTownPosition(size_t portalIndex)
@@ -117,12 +106,14 @@ void InitializeTristram()
 {
 	TownConfig tristram;
 	tristram.name = "Tristram";
+	tristram.townId = TristramTownId;
 	tristram.sectors = {
 		{ "levels\\towndata\\sector1s.dun", 46, 46 },
 		{ "levels\\towndata\\sector2s.dun", 46, 0 },
 		{ "levels\\towndata\\sector3s.dun", 0, 46 },
 		{ "levels\\towndata\\sector4s.dun", 0, 0 },
 	};
+	// Spawn positions (view): one tile stepped from matching town triggers / stairs.
 	tristram.entries = {
 		{ ENTRY_MAIN, { 75, 68 }, -1 },
 		{ ENTRY_PREV, { 25, 31 }, -1 },
@@ -131,9 +122,12 @@ void InitializeTristram()
 		{ ENTRY_TWARPUP, { 41, 81 }, 13 },
 		{ ENTRY_TWARPUP, { 36, 25 }, 21 },
 		{ ENTRY_TWARPUP, { 79, 62 }, 17 },
+		{ ENTRY_TOWNSWITCH, { 75, 68 }, -1 },
 	};
 	tristram.triggers = {
+		// Cathedral stairs (down to dungeon level 1)
 		{ { 25, 29 }, WM_DIABNEXTLVL, 0, std::nullopt },
+		// Town warp portals (active only when the respective warp is open)
 		{ { 49, 21 }, WM_DIABTOWNWARP, 5, DTYPE_CATACOMBS },
 		{ { 17, 69 }, WM_DIABTOWNWARP, 9, DTYPE_CAVES },
 		{ { 41, 80 }, WM_DIABTOWNWARP, 13, DTYPE_HELL },
@@ -141,9 +135,9 @@ void InitializeTristram()
 		{ { 36, 24 }, WM_DIABTOWNWARP, 21, DTYPE_CRYPT },
 	};
 	TownRegistry &registry = GetTownRegistry();
-	registry.RegisterTown(TristramTownId, tristram);
-	const std::string &current = registry.GetCurrentTown();
-	if (current.empty() || !registry.HasTown(current))
+	registry.RegisterTown(tristram);
+	const std::optional<uint8_t> current = registry.GetCurrentTown();
+	if (!current.has_value() || !registry.HasTown(*current))
 		registry.SetCurrentTown(TristramTownId);
 }
 

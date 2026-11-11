@@ -12,6 +12,8 @@
 #include "levels/gendung_defs.hpp"
 #include "levels/town_data.h"
 #include "lua/metadoc.hpp"
+#include "msg.h"
+#include "player.h"
 #include "towners.h"
 #include "utils/log.hpp"
 
@@ -34,13 +36,18 @@ std::optional<dungeon_type> ParseWarpGateString(std::string_view w)
 	return std::nullopt;
 }
 
-std::string LuaRegisterTown(std::string_view townId, const sol::table &config)
+std::optional<uint8_t> LuaRegisterTown(const sol::table &config)
 {
+	sol::optional<int> townId = config["townId"];
+	if (!townId.has_value() || *townId < MinModTownId || *townId > MaxTownId) {
+		LogError("registerTown: townId must be in {}..{}", MinModTownId, MaxTownId);
+		return std::nullopt;
+	}
+
 	TownConfig townConfig;
+	townConfig.townId = static_cast<uint8_t>(*townId);
 	sol::optional<std::string> name = config["name"];
-	townConfig.name = name.has_value() ? *name : std::string(townId);
-	sol::optional<int> saveId = config["saveId"];
-	townConfig.saveId = saveId.has_value() ? static_cast<uint8_t>(*saveId) : 0;
+	townConfig.name = name.value_or("Town");
 
 	if (sol::optional<sol::table> assets = config["assets"]) {
 		sol::table t = *assets;
@@ -99,6 +106,8 @@ std::string LuaRegisterTown(std::string_view townId, const sol::table &config)
 				ep.entryType = ENTRY_TWARPDN;
 			else if (type == "twarpup")
 				ep.entryType = ENTRY_TWARPUP;
+			else if (type == "townswitch")
+				ep.entryType = ENTRY_TOWNSWITCH;
 			else
 				ep.entryType = ENTRY_MAIN;
 			sol::optional<int> ex = entry["x"];
@@ -189,19 +198,40 @@ std::string LuaRegisterTown(std::string_view townId, const sol::table &config)
 		}
 	}
 
-	std::string townIdStr(townId);
-	GetTownRegistry().RegisterTown(townIdStr, townConfig);
-	return townIdStr;
+	GetTownRegistry().RegisterTown(townConfig);
+	return townConfig.townId;
 }
 
-std::string LuaGetCurrentTown()
+void LuaTravelToTown(int townId)
+{
+	if (townId < static_cast<int>(TristramTownId) || townId > MaxTownId) {
+		LogError("Town id {} is out of range", townId);
+		return;
+	}
+	const auto id = static_cast<uint8_t>(townId);
+	if (!GetTownRegistry().HasTown(id)) {
+		LogError("Town id {} is not registered", id);
+		return;
+	}
+
+	if (gbIsMultiplayer) {
+		NetSendCmdTownTravel(0xFFFFFFFF, id);
+		return;
+	}
+
+	QueueTownSwitch(id);
+}
+
+std::optional<uint8_t> LuaGetCurrentTown()
 {
 	return GetTownRegistry().GetCurrentTown();
 }
 
-bool LuaHasTown(std::string_view townId)
+bool LuaHasTown(int townId)
 {
-	return GetTownRegistry().HasTown(std::string(townId));
+	if (townId < static_cast<int>(TristramTownId) || townId > MaxTownId)
+		return false;
+	return GetTownRegistry().HasTown(static_cast<uint8_t>(townId));
 }
 
 } // namespace
@@ -210,8 +240,10 @@ sol::table LuaTownsModule(sol::state_view &lua)
 {
 	sol::table table = lua.create_table();
 
-	LuaSetDocFn(table, "register", "(townId: string, config: table) -> string",
-	    "Registers a new town from a config table. Returns town ID.\n"
+	LuaSetDocFn(table, "register", "(config: table) -> integer|nil",
+	    "Registers a town from a config table. Returns its town id, or nil if townId is missing or out of range.\n"
+	    "Required townId: integer 1..255. Registering the same townId again replaces that town. 0 is reserved for Tristram.\n"
+	    "Optional name: display name. Defaults to \"Town\".\n"
 	    "Optional assets: { dungeonCel, megaTile, min, specialCels, sol, palette, microTileLen } — paths for the tile gfx/palette.\n"
 	    "  microTileLen: sub-tile count per mega-tile (16 for town.cel, 10 for L1/L2/L3/L6 CEL, 12 for L4). Default: 16.\n"
 	    "  Omitted path keys keep the Tristram default. On load failure the engine falls back through Tristram's full path chain.\n"
@@ -225,12 +257,16 @@ sol::table LuaTownsModule(sol::state_view &lua)
 	    "  A renamed NPC is addressed by its name in menus (\"Talk to ...\"). Without npcs, the default Tristram NPCs are used.",
 	    LuaRegisterTown);
 
-	LuaSetDocFn(table, "current", "() -> string",
-	    "Returns the current town ID.",
+	LuaSetDocFn(table, "travel", "(townId: integer)",
+	    "Travels to the town with this id.",
+	    LuaTravelToTown);
+
+	LuaSetDocFn(table, "current", "() -> integer|nil",
+	    "Returns the current town id, or nil if none is set.",
 	    LuaGetCurrentTown);
 
-	LuaSetDocFn(table, "exists", "(townId: string) -> boolean",
-	    "Checks if a town is registered.",
+	LuaSetDocFn(table, "exists", "(townId: integer) -> boolean",
+	    "Checks if this town id is registered.",
 	    LuaHasTown);
 
 	return table;

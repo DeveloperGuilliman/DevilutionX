@@ -34,9 +34,11 @@
 #include "engine/random.hpp"
 #include "engine/world_tile.hpp"
 #include "gamemenu.h"
+#include "interfac.h"
 #include "items/validation.h"
 #include "levels/crypt.h"
 #include "levels/town.h"
+#include "levels/town_data.h"
 #include "levels/trigs.h"
 #include "lighting.h"
 #include "missiles.h"
@@ -2484,6 +2486,29 @@ size_t OnSetVitality(const TCmdParam1 &message, Player &player)
 	return sizeof(message);
 }
 
+size_t OnTownTravel(const TCmdParam1 &message, Player & /*player*/)
+{
+	const uint16_t townIdParam = Swap16LE(message.wParam1);
+	if (townIdParam > MaxTownId) {
+		LogError("Network: town id {} is out of range", townIdParam);
+		return sizeof(message);
+	}
+	const auto townId = static_cast<uint8_t>(townIdParam);
+
+	// gbBufferMsgs != 0 means we are buffering a game-state replay; skip the SDL
+	// event so we do not queue a second town switch while one is already in flight.
+	if (gbBufferMsgs == 0) {
+		if (GetTownRegistry().HasTown(townId)) {
+			LogInfo("Network: Received town travel to {}", townId);
+			QueueTownSwitch(townId);
+		} else {
+			LogError("Network: Unknown town id {}", townId);
+		}
+	}
+
+	return sizeof(message);
+}
+
 size_t OnString(const TCmd &cmd, size_t maxCmdSize, Player &player)
 {
 	const auto &message = reinterpret_cast<const TCmdString &>(cmd);
@@ -3342,6 +3367,15 @@ void NetSendCmdString(uint32_t pmask, const char *pszStr)
 	multi_send_msg_packet(pmask, reinterpret_cast<std::byte *>(&cmd), strlen(cmd.str) + 2);
 }
 
+void NetSendCmdTownTravel(uint32_t pmask, uint8_t townId)
+{
+	TCmdParam1 cmd;
+
+	cmd.bCmd = CMD_TOWNTRAVEL;
+	cmd.wParam1 = Swap16LE(static_cast<uint16_t>(townId));
+	multi_send_msg_packet(pmask, reinterpret_cast<std::byte *>(&cmd), sizeof(cmd));
+}
+
 void delta_close_portal(const Player &player)
 {
 	memset(&sgJunk.portal[player.getId()], 0xFF, sizeof(sgJunk.portal[player.getId()]));
@@ -3485,6 +3519,8 @@ size_t ParseCmd(uint8_t pnum, const TCmd *pCmd, size_t maxCmdSize)
 		return OnDeactivatePortal(*pCmd, player);
 	case CMD_RETOWN:
 		return OnRestartTown(*pCmd, player);
+	case CMD_TOWNTRAVEL:
+		return HandleCmd(OnTownTravel, player, pCmd, maxCmdSize);
 	case CMD_SETSTR:
 		return HandleCmd(OnSetStrength, player, pCmd, maxCmdSize);
 	case CMD_SETMAG:
