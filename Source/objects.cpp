@@ -38,9 +38,9 @@
 #include "monster.h"
 #include "options.h"
 #include "qol/stash.h"
+#include "shrines.hpp"
 #include "stores.h"
 #include "tables/objdat.h"
-#include "tables/shrinedat.hpp"
 #include "towners.h"
 #include "track.h"
 #include "utils/algorithm/container.hpp"
@@ -471,73 +471,15 @@ void AddDiabObjs()
 void AddCryptObject(Object &object, int a2)
 {
 	if (a2 > 5) {
-		const Player &myPlayer = *MyPlayer;
 		switch (a2) {
 		case 6:
-			switch (myPlayer._pClass) {
-			case HeroClass::Warrior:
-			case HeroClass::Barbarian:
-				object._oVar2 = TEXT_BOOKA;
-				break;
-			case HeroClass::Rogue:
-				object._oVar2 = TEXT_RBOOKA;
-				break;
-			case HeroClass::Sorcerer:
-				object._oVar2 = TEXT_MBOOKA;
-				break;
-			case HeroClass::Monk:
-				object._oVar2 = TEXT_OBOOKA;
-				break;
-			case HeroClass::Bard:
-				object._oVar2 = TEXT_BBOOKA;
-				break;
-			default:
-				break;
-			}
+			object._oVar2 = TEXT_BOOKA;
 			break;
 		case 7:
-			switch (myPlayer._pClass) {
-			case HeroClass::Warrior:
-			case HeroClass::Barbarian:
-				object._oVar2 = TEXT_BOOKB;
-				break;
-			case HeroClass::Rogue:
-				object._oVar2 = TEXT_RBOOKB;
-				break;
-			case HeroClass::Sorcerer:
-				object._oVar2 = TEXT_MBOOKB;
-				break;
-			case HeroClass::Monk:
-				object._oVar2 = TEXT_OBOOKB;
-				break;
-			case HeroClass::Bard:
-				object._oVar2 = TEXT_BBOOKB;
-				break;
-			default:
-				break;
-			}
+			object._oVar2 = TEXT_BOOKB;
 			break;
 		case 8:
-			switch (myPlayer._pClass) {
-			case HeroClass::Warrior:
-			case HeroClass::Barbarian:
-				object._oVar2 = TEXT_BOOKC;
-				break;
-			case HeroClass::Rogue:
-				object._oVar2 = TEXT_RBOOKC;
-				break;
-			case HeroClass::Sorcerer:
-				object._oVar2 = TEXT_MBOOKC;
-				break;
-			case HeroClass::Monk:
-				object._oVar2 = TEXT_OBOOKC;
-				break;
-			case HeroClass::Bard:
-				object._oVar2 = TEXT_BBOOKC;
-				break;
-			default:
-				break;
-			}
+			object._oVar2 = TEXT_BOOKC;
 			break;
 		}
 		object._oVar3 = 15;
@@ -1177,7 +1119,7 @@ int FindValidShrine(bool forRandomEffectShrine)
 	for (;;) {
 		const int rv = GenerateRnd(ShrinesData.size());
 		const ShrineData &shrineData = GetShrineData(static_cast<uint8_t>(rv));
-		if (forRandomEffectShrine && !shrineData.availableRandomEffectShrine) {
+		if (forRandomEffectShrine && HasAnyOf(shrineData.shrineOperateFlags, ShrineOperateFlag::UnavailableRandom)) {
 			continue;
 		}
 		if (leveltype < shrineData.minLevelType || leveltype > shrineData.maxLevelType) {
@@ -1859,29 +1801,7 @@ void OperateChamberOfBoneBook(Object &questBook, bool sendmsg)
 		Quests[Q_SCHAMB]._qlog = true;
 	}
 
-	_speech_id textdef;
-	switch (MyPlayer->_pClass) {
-	case HeroClass::Warrior:
-		textdef = TEXT_BONER;
-		break;
-	case HeroClass::Rogue:
-		textdef = TEXT_RBONER;
-		break;
-	case HeroClass::Sorcerer:
-		textdef = TEXT_MBONER;
-		break;
-	case HeroClass::Monk:
-		textdef = TEXT_HBONER;
-		break;
-	case HeroClass::Bard:
-		textdef = TEXT_RBONER;
-		break;
-	case HeroClass::Barbarian:
-		textdef = TEXT_BONER;
-		break;
-	default:
-		break;
-	}
+	_speech_id textdef = TEXT_BONER;
 	if (sendmsg) {
 		Quests[Q_SCHAMB]._qmsg = textdef;
 		NetSendCmdQuest(true, Quests[Q_SCHAMB]);
@@ -2137,23 +2057,30 @@ void OperateShrine(Player &player, Object &shrine, SfxID sType)
 	shrine._oAnimDelay = 1;
 
 	const ShrineData &shrineData = GetShrineData(static_cast<uint8_t>(shrine._oVar1));
-	int messageIndex = shrineData.operateFn(rng, player, shrine.position, shrineData.powerParam1, shrineData.powerParam2);
+	const ShrineMessage shrineMessage = OperateShrine(rng, player, shrine.position, shrineData);
+	CheckStats(*MyPlayer);
+	CalcPlrInv(*MyPlayer, true);
+	RedrawEverything();
 
 	if (&player == MyPlayer) {
 		NetSendCmdLoc(MyPlayerId, false, CMD_OPERATEOBJ, shrine.position);
 	}
+
 	std::string message;
-	switch (messageIndex) {
-	case 4:
+	switch (shrineMessage) {
+	case ShrineMessage::ShrineMessage5:
+		message = shrineData.message5;
+		break;
+	case ShrineMessage::ShrineMessage4:
 		message = shrineData.message4;
 		break;
-	case 3:
+	case ShrineMessage::ShrineMessage3:
 		message = shrineData.message3;
 		break;
-	case 2:
+	case ShrineMessage::ShrineMessage2:
 		message = shrineData.message2;
 		break;
-	case 1:
+	case ShrineMessage::ShrineMessage1:
 		message = shrineData.message;
 		break;
 	default:
@@ -2682,7 +2609,7 @@ bool Object::IsDisabled() const
 	if (!IsShrine()) {
 		return false;
 	}
-	return GetShrineData(static_cast<uint8_t>(_oVar1)).cripplingEffect;
+	return HasAnyOf(GetShrineData(static_cast<uint8_t>(_oVar1)).shrineOperateFlags, ShrineOperateFlag::Crippling);
 }
 
 Object *FindObjectAtPosition(Point position, bool considerLargeObjects)
@@ -2902,57 +2829,13 @@ void InitObjects()
 			AddL2Objs(0, 0, MAXDUNX, MAXDUNY);
 			AddL2Torches();
 			if (Quests[Q_BLIND].IsAvailable()) {
-				_speech_id spId;
-				switch (MyPlayer->_pClass) {
-				case HeroClass::Warrior:
-					spId = TEXT_BLINDING;
-					break;
-				case HeroClass::Rogue:
-					spId = TEXT_RBLINDING;
-					break;
-				case HeroClass::Sorcerer:
-					spId = TEXT_MBLINDING;
-					break;
-				case HeroClass::Monk:
-					spId = TEXT_HBLINDING;
-					break;
-				case HeroClass::Bard:
-					spId = TEXT_RBLINDING;
-					break;
-				case HeroClass::Barbarian:
-					spId = TEXT_BLINDING;
-					break;
-				default:
-					break;
-				}
+				_speech_id spId = TEXT_BLINDING;
 				Quests[Q_BLIND]._qmsg = spId;
 				AddBookLever(OBJ_BLINDBOOK, { SetPiece.position, SetPiece.size + 1 }, spId);
 				LoadMapObjects("levels\\l2data\\blind2.dun", SetPiece.position.megaToWorld());
 			}
 			if (Quests[Q_BLOOD].IsAvailable()) {
-				_speech_id spId;
-				switch (MyPlayer->_pClass) {
-				case HeroClass::Warrior:
-					spId = TEXT_BLOODY;
-					break;
-				case HeroClass::Rogue:
-					spId = TEXT_RBLOODY;
-					break;
-				case HeroClass::Sorcerer:
-					spId = TEXT_MBLOODY;
-					break;
-				case HeroClass::Monk:
-					spId = TEXT_HBLOODY;
-					break;
-				case HeroClass::Bard:
-					spId = TEXT_RBLOODY;
-					break;
-				case HeroClass::Barbarian:
-					spId = TEXT_BLOODY;
-					break;
-				default:
-					break;
-				}
+				_speech_id spId = TEXT_BLOODY;
 				Quests[Q_BLOOD]._qmsg = spId;
 				AddBookLever(OBJ_BLOODBOOK, { SetPiece.position + Displacement { 0, 3 }, { 2, 4 } }, spId);
 				AddObject(OBJ_PEDESTAL, SetPiece.position.megaToWorld() + Displacement { 9, 16 });
@@ -2965,29 +2848,7 @@ void InitObjects()
 		}
 		if (leveltype == DTYPE_HELL) {
 			if (Quests[Q_WARLORD].IsAvailable()) {
-				_speech_id spId;
-				switch (MyPlayer->_pClass) {
-				case HeroClass::Warrior:
-					spId = TEXT_BLOODWAR;
-					break;
-				case HeroClass::Rogue:
-					spId = TEXT_RBLOODWAR;
-					break;
-				case HeroClass::Sorcerer:
-					spId = TEXT_MBLOODWAR;
-					break;
-				case HeroClass::Monk:
-					spId = TEXT_HBLOODWAR;
-					break;
-				case HeroClass::Bard:
-					spId = TEXT_RBLOODWAR;
-					break;
-				case HeroClass::Barbarian:
-					spId = TEXT_BLOODWAR;
-					break;
-				default:
-					break;
-				}
+				_speech_id spId = TEXT_BLOODWAR;
 				Quests[Q_WARLORD]._qmsg = spId;
 				AddBookLever(OBJ_STEELTOME, SetPiece, spId);
 				LoadMapObjects("levels\\l4data\\warlord.dun", SetPiece.position.megaToWorld());
