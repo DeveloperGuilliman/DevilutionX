@@ -45,6 +45,20 @@ std::string DebugCmdItemInfo()
 	if (pItem != nullptr) {
 		const Player &myPlayer = *MyPlayer;
 		std::string_view netPackValidation { "N/A" };
+		std::string_view difficulty;
+		switch ((pItem->dwBuff & CF_DIFFICULTY) >> 6) {
+		case 3:
+			difficulty = "Hell";
+			break;
+		case 2:
+			difficulty = "Nightmare";
+			break;
+		case 1:
+			difficulty = "Normal";
+			break;
+		default:
+			difficulty = "Unknown";
+		}
 		if (gbIsMultiplayer) {
 			ItemNetPack itemPack;
 			Item unpacked;
@@ -66,6 +80,8 @@ std::string DebugCmdItemInfo()
 		    "\nWitch: ", ((pItem->_iCreateInfo & CF_WITCH) == 0) ? "False" : "True",
 		    "\nHealer: ", ((pItem->_iCreateInfo & CF_HEALER) == 0) ? "False" : "True",
 		    "\nPregen: ", ((pItem->_iCreateInfo & CF_PREGEN) == 0) ? "False" : "True",
+		    "\nDebug: ", ((pItem->dwBuff & CF_DEBUG) == 0) ? "False" : "True",
+		    "\nDifficulty: ", difficulty,
 		    "\nNet Validation: ", netPackValidation);
 	}
 	return StrCat("Num items: ", ActiveItemCount);
@@ -114,6 +130,7 @@ std::string DebugSpawnItem(std::string itemName)
 	auto &item = Items[ii];
 	item = testItem.pop();
 	item._iIdentified = true;
+	item.dwBuff |= CF_DEBUG;
 	Point pos = MyPlayer->position.tile;
 	GetSuperItemSpace(pos, ii);
 	NetSendCmdPItem(false, CMD_SPAWNITEM, item.position, item);
@@ -193,6 +210,7 @@ std::string DebugSpawnUniqueItem(std::string itemName)
 	Point pos = MyPlayer->position.tile;
 	GetSuperItemSpace(pos, ii);
 	item._iIdentified = true;
+	item.dwBuff |= CF_DEBUG;
 	NetSendCmdPItem(false, CMD_SPAWNITEM, item.position, item);
 
 	return StrCat("Item generated successfully - iterations: ", i);

@@ -448,10 +448,14 @@ bool UnPackNetItem(const Player &player, const ItemNetPack &packedItem, Item &it
 
 	const uint16_t creationFlags = Swap16LE(packedItem.item.wCI);
 	const uint32_t dwBuff = Swap16LE(packedItem.item.dwBuff);
+#ifndef _DEBUG
+	if (dwBuff & CF_DEBUG)
+		return false;
+#endif
 	if (idx != IDI_GOLD)
 		ValidateField(creationFlags, IsCreationFlagComboValid(creationFlags));
 	if ((creationFlags & CF_TOWN) != 0)
-		ValidateField(creationFlags, IsTownItemValid(creationFlags, player));
+		ValidateField(creationFlags, IsTownItemValid(creationFlags, dwBuff, player));
 	else if ((creationFlags & CF_USEFUL) == CF_UPER15)
 		ValidateFields(creationFlags, dwBuff, IsUniqueMonsterItemValid(creationFlags, dwBuff));
 	else if ((dwBuff & CF_HELLFIRE) != 0 && AllItemsList[idx].iMiscId == IMISC_BOOK)

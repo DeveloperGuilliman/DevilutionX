@@ -34,10 +34,14 @@ namespace devilution {
 #define DUR_INDESTRUCTIBLE 255
 
 constexpr int ItemNameLength = 64;
-constexpr int MaxVendorValue = 140000;
-constexpr int MaxVendorValueHf = 200000;
-constexpr int MaxBoyValue = 90000;
-constexpr int MaxBoyValueHf = 200000;
+constexpr int MaxVendorValue = 210000;
+constexpr int MaxVendorValueHf = 300000;
+constexpr int MaxBoyValue = 13500;
+constexpr int MaxBoyValueHf = 300000;
+constexpr int NightmareAdditionalTowmItemLevel = 10;
+constexpr int HellAdditionalTowmItemLevel = 20;
+constexpr int NightmareAdditionalMonsterItemLevel = 15;
+constexpr int HellAdditionalMonsterItemLevel = 30;
 
 enum item_quality : uint8_t {
 	ITEM_QUALITY_NORMAL,
@@ -177,7 +181,9 @@ enum icreateinfo_flag {
 enum icreateinfo_flag2 {
 	// clang-format off
 	CF_HELLFIRE = 1 << 0,
-	CF_UIDOFFSET = ((1 << 4) - 1) << 1,
+    CF_UIDOFFSET = ((1 << 4) - 1) << 1,
+    CF_DEBUG = 1 << 5,
+    CF_DIFFICULTY = ((1 << 2) - 1) << 6,
 	// clang-format on
 };
 

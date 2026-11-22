@@ -1306,11 +1306,14 @@ bool IsPItemValid(const TCmdPItem &message, const Player &player)
 	if (idx != IDI_EAR) {
 		const uint16_t creationFlags = Swap16LE(message.item.wCI);
 		const uint32_t dwBuff = Swap16LE(message.item.dwBuff);
-
+#ifndef _DEBUG
+		if (dwBuff & CF_DEBUG)
+			return false;
+#endif
 		if (idx != IDI_GOLD)
 			ValidateField(creationFlags, IsCreationFlagComboValid(creationFlags));
 		if ((creationFlags & CF_TOWN) != 0)
-			ValidateField(creationFlags, IsTownItemValid(creationFlags, player));
+			ValidateField(creationFlags, IsTownItemValid(creationFlags, dwBuff, player));
 		else if ((creationFlags & CF_USEFUL) == CF_UPER15)
 			ValidateFields(creationFlags, dwBuff, IsUniqueMonsterItemValid(creationFlags, dwBuff));
 		else if ((dwBuff & CF_HELLFIRE) != 0 && AllItemsList[idx].iMiscId == IMISC_BOOK)
@@ -2050,7 +2053,7 @@ size_t OnRequestSpawnGolem(const TCmdLocParam2 &message, const Player &player)
 
 	const WorldTilePosition position { message.x, message.y };
 
-	if (player.plrlevel > 0 && player.isLevelOwnedByLocalClient() && InDungeonBounds(position)){
+	if (player.plrlevel > 0 && player.isLevelOwnedByLocalClient() && InDungeonBounds(position)) {
 		const uint16_t spellLevel = Swap16LE(message.wParam1);
 		const uint16_t monsterType = Swap16LE(message.wParam2);
 		LogInfo("PET OnRequestSpawnGolem()| Calling SpawnPet() player {} , position ({},{}) , spellLevel {} , monsterType {}", player.getId(), position.x, position.y, spellLevel, monsterType);

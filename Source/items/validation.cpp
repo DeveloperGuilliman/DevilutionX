@@ -47,16 +47,20 @@ bool IsCreationFlagComboValid(uint16_t iCreateInfo)
 	return true;
 }
 
-bool IsTownItemValid(uint16_t iCreateInfo, const Player &player)
+bool IsTownItemValid(uint16_t iCreateInfo, const uint32_t dwBuff, const Player &player)
 {
 	const uint8_t level = iCreateInfo & CF_LEVEL;
 	const bool isBoyItem = (iCreateInfo & CF_BOY) != 0;
-	const uint8_t maxTownItemLevel = 30;
-
 	// Wirt items in multiplayer are equal to the level of the player, therefore they cannot exceed the max character level
 	if (isBoyItem && level <= player.getMaxCharacterLevel())
 		return true;
-
+	uint8_t maxTownItemLevel = 30;
+	if ((dwBuff & CF_DIFFICULTY) >> 6 == 2) {
+		maxTownItemLevel += NightmareAdditionalTowmItemLevel;
+	}
+	if ((dwBuff & CF_DIFFICULTY) >> 6 == 3) {
+		maxTownItemLevel += HellAdditionalTowmItemLevel;
+	}
 	return level <= maxTownItemLevel;
 }
 
@@ -75,7 +79,7 @@ bool IsShopPriceValid(const Item &item)
 	return !((item._iCreateInfo & smithOrWitch) != 0 && item._iIvalue > smithAndWitchPriceLimit);
 }
 
-bool IsUniqueMonsterItemValid(uint16_t iCreateInfo, uint32_t /*dwBuff*/)
+bool IsUniqueMonsterItemValid(uint16_t iCreateInfo, uint32_t dwBuff)
 {
 	const uint8_t level = iCreateInfo & CF_LEVEL;
 
@@ -86,9 +90,14 @@ bool IsUniqueMonsterItemValid(uint16_t iCreateInfo, uint32_t /*dwBuff*/)
 			continue;
 		}
 
-		const auto &uniqueMonsterLevel = static_cast<uint8_t>(MonstersData[uniqueMonsterData.mtype].level);
-
-		if (level == uniqueMonsterLevel) {
+		int8_t uniqueMonsterLevel = MonstersData[uniqueMonsterData.mtype].level;
+		if ((dwBuff & CF_DIFFICULTY) >> 6 == 2) {
+			uniqueMonsterLevel += NightmareAdditionalMonsterItemLevel;
+		}
+		if ((dwBuff & CF_DIFFICULTY) >> 6 == 3) {
+			uniqueMonsterLevel += HellAdditionalMonsterItemLevel;
+		}
+		if (level == static_cast<uint8_t>(uniqueMonsterLevel)) {
 			// If the ilvl matches the mlvl, we confirm the item is legitimate
 			return true;
 		}
@@ -117,7 +126,12 @@ bool IsDungeonItemValid(uint16_t iCreateInfo, uint32_t dwBuff)
 			// Adjust The Dark Lord's mlvl if the item is a Hellfire item to match the Diablo mlvl
 			monsterLevel += 15;
 		}
-
+		if ((dwBuff & CF_DIFFICULTY) >> 6 == 2) {
+			monsterLevel += NightmareAdditionalMonsterItemLevel;
+		}
+		if ((dwBuff & CF_DIFFICULTY) >> 6 == 3) {
+			monsterLevel += HellAdditionalMonsterItemLevel;
+		}
 		if (level == monsterLevel) {
 			// If the ilvl matches the mlvl, we confirm the item is legitimate
 			return true;
@@ -159,13 +173,16 @@ bool IsItemValid(const Player &player, const Item &item)
 {
 	if (!gbIsMultiplayer)
 		return true;
-
+#ifndef _DEBUG
+	if (item.dwBuff & CF_DEBUG)
+		return false;
+#endif
 	if (item.IDidx == IDI_EAR)
 		return true;
 	if (item.IDidx != IDI_GOLD && !IsCreationFlagComboValid(item._iCreateInfo))
 		return false;
 	if ((item._iCreateInfo & CF_TOWN) != 0)
-		return IsTownItemValid(item._iCreateInfo, player) && IsShopPriceValid(item);
+		return IsTownItemValid(item._iCreateInfo, item.dwBuff, player) && IsShopPriceValid(item);
 	if ((item._iCreateInfo & CF_USEFUL) == CF_UPER15)
 		return IsUniqueMonsterItemValid(item._iCreateInfo, item.dwBuff);
 	if ((item.dwBuff & CF_HELLFIRE) != 0 && AllItemsList[item.IDidx].iMiscId == IMISC_BOOK)

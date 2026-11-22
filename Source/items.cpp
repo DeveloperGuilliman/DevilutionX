@@ -1943,7 +1943,13 @@ void SpawnOnePremium(Item &premiumItem, int plvl, const Player &player)
 	dexterity += dexterity / 5;
 	magic += magic / 5;
 
-	plvl = std::clamp(plvl, 1, 30);
+	int maxLevel = 30;
+	if (sgGameInitInfo.nDifficulty == DIFF_NIGHTMARE) {
+		maxLevel += NightmareAdditionalTowmItemLevel;
+	} else if (sgGameInitInfo.nDifficulty == DIFF_HELL) {
+		maxLevel += HellAdditionalTowmItemLevel;
+	}
+	plvl = std::clamp(plvl, 1, maxLevel);
 
 	const int maxCount = 150;
 	const bool unlimited = !gbIsHellfire; // TODO: This could lead to an infinite loop if a suitable item can never be generated
@@ -2613,7 +2619,7 @@ void CalcPlrResistances(Player &player, ItemSpecialEffect iflgs, int fire, int l
 	} else if (!HasAnyOf(player._pSpellFlags, SpellFlag::RageCooldown)) {
 		const PlayerCombatData &playerCombatData = GetPlayerCombatDataForClass(player._pClass);
 		magic += (playerLevel * playerCombatData.magicResistanceBonus).whole();
-		fire += (playerLevel * playerCombatData.fireResistanceBonus).whole();;
+		fire += (playerLevel * playerCombatData.fireResistanceBonus).whole();
 		lightning += (playerLevel * playerCombatData.lightningResistanceBonus).whole();
 	}
 
@@ -2648,7 +2654,7 @@ void CalcPlrBlockFlag(Player &player)
 	const auto &rightHandItem = player.InvBody[INVLOC_HAND_RIGHT];
 
 	player._pBlockFlag = false;
-	
+
 	const ClassAttributes &classAttributes = GetClassAttributes(player._pClass);
 	if (HasAnyOf(classAttributes.classFlags, PlayerClassFlag::StaffBlock) && player.isHoldingItem(ItemType::Staff)) {
 		player._pBlockFlag = true;
@@ -3165,6 +3171,7 @@ void GetItemAttrs(Item &item, _item_indexes itemData, int lvl)
 	item.IDidx = itemData;
 	if (gbIsHellfire)
 		item.dwBuff |= CF_HELLFIRE;
+	item.dwBuff |= (CF_DIFFICULTY & (static_cast<uint32_t>(sgGameInitInfo.nDifficulty) + 1) << 6);
 	item._iPrePower = IPL_INVALID;
 	item._iSufPower = IPL_INVALID;
 
@@ -3233,7 +3240,13 @@ Item *SpawnUnique(_unique_items uid, Point position, std::optional<int> level /*
 		const _item_indexes dropIdx = GetItemIndexForDroppableItem(false, [&uniqueItemData](const ItemData &item) {
 			return item.itype == uniqueItemData.itype;
 		});
-		SetupAllItems(*MyPlayer, item, dropIdx, AdvanceRndSeed(), curlv * 2, 15, true, false);
+		curlv *= 2;
+		if (sgGameInitInfo.nDifficulty == DIFF_NIGHTMARE) {
+			curlv += NightmareAdditionalMonsterItemLevel;
+		} else if (sgGameInitInfo.nDifficulty == DIFF_HELL) {
+			curlv += HellAdditionalMonsterItemLevel;
+		}
+		SetupAllItems(*MyPlayer, item, dropIdx, AdvanceRndSeed(), curlv, 15, true, false);
 		TryRandomUniqueItem(item, dropIdx, curlv * 2, 15, true, false);
 		SetupItem(item);
 	}
@@ -3480,7 +3493,12 @@ void SpawnItem(Monster &monster, Point position, bool sendmsg, bool spawn /*= fa
 	GetSuperItemSpace(position, ii);
 	const int uper = monster.isUnique() ? 15 : 1;
 
-	const int8_t mLevel = monster.data().level;
+	int8_t mLevel = monster.data().level;
+	if (sgGameInitInfo.nDifficulty == DIFF_NIGHTMARE) {
+		mLevel += NightmareAdditionalMonsterItemLevel;
+	} else if (sgGameInitInfo.nDifficulty == DIFF_HELL) {
+		mLevel += HellAdditionalMonsterItemLevel;
+	}
 	SetupAllItems(*MyPlayer, item, idx, AdvanceRndSeed(), mLevel, uper, onlygood, false);
 	TryRandomUniqueItem(item, idx, mLevel, uper, onlygood, false);
 	SetupItem(item);
