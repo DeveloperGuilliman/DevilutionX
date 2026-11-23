@@ -1282,6 +1282,9 @@ ShrineMessage ShrineEffectBreakItemOrTakeGold(DiabloGenerator &rng, Player &oper
 
 ShrineMessage OperateShrine(DiabloGenerator &rng, Player &operatePlayer, const Point shrinePosition, const ShrineData &shrineData)
 {
+    if (HasAnyOf(ShrineOperateFlag::DifferentSeedPlayer, shrineData.shrineOperateFlags)) {
+        rng.discardRandomValues(MyPlayerId);
+    }
 	ShrineMessage shrineMessage = ShrineMessage::ShrineMessageDefault;
 	for (size_t i = 0; i < MAX_SHRINE_EFFECTS; ++i) {
 		const ShrineEffect shrineEffect = shrineData.shrineEffect[i];

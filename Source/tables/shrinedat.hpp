@@ -42,9 +42,10 @@ enum class ShrineOperateFlag : uint8_t {
 	// clang-format off
 	None = 0,
 	Crippling = 1 << 0,
-	UnavailableRandom = 1 << 1,
+    UnavailableRandom = 1 << 1,
+    DifferentSeedPlayer = 1 << 2,
 
-	Last = UnavailableRandom
+	Last = DifferentSeedPlayer
 	// clang-format on
 };
 use_enum_as_flags(ShrineOperateFlag);

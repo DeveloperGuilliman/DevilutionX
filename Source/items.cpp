@@ -469,7 +469,8 @@ void AddInitItems()
 		GetItemAttrs(item, PickRandomlyAmong({ IDI_MANA, IDI_HEAL }), curlv);
 
 		item._iCreateInfo = curlv | CF_PREGEN;
-		SetupItem(item);
+        item.dwBuff |= ((static_cast<uint32_t>(sgGameInitInfo.nDifficulty + 1)) << 6) & CF_DIFFICULTY;
+        SetupItem(item);
 		item.AnimInfo.currentFrame = static_cast<int8_t>(item.AnimInfo.numberOfFrames - 1);
 		item._iAnimFlag = false;
 		item.selectionRegion = SelectionRegion::Bottom;
@@ -2009,7 +2010,8 @@ void SpawnOnePremium(Item &premiumItem, int plvl, const Player &player)
 		}
 	}
 	premiumItem._iCreateInfo = plvl | CF_SMITHPREMIUM;
-	premiumItem._iIdentified = true;
+    premiumItem.dwBuff |= ((static_cast<uint32_t>(sgGameInitInfo.nDifficulty + 1)) << 6) & CF_DIFFICULTY;
+    premiumItem._iIdentified = true;
 	premiumItem._iStatFlag = player.CanUseItem(premiumItem);
 }
 
@@ -3171,7 +3173,6 @@ void GetItemAttrs(Item &item, _item_indexes itemData, int lvl)
 	item.IDidx = itemData;
 	if (gbIsHellfire)
 		item.dwBuff |= CF_HELLFIRE;
-	item.dwBuff |= (CF_DIFFICULTY & (static_cast<uint32_t>(sgGameInitInfo.nDifficulty) + 1) << 6);
 	item._iPrePower = IPL_INVALID;
 	item._iSufPower = IPL_INVALID;
 
@@ -3246,7 +3247,8 @@ Item *SpawnUnique(_unique_items uid, Point position, std::optional<int> level /*
 		} else if (sgGameInitInfo.nDifficulty == DIFF_HELL) {
 			curlv += HellAdditionalMonsterItemLevel;
 		}
-		SetupAllItems(*MyPlayer, item, dropIdx, AdvanceRndSeed(), curlv, 15, true, false);
+        item.dwBuff |= ((static_cast<uint32_t>(sgGameInitInfo.nDifficulty + 1)) << 6) & CF_DIFFICULTY;
+        SetupAllItems(*MyPlayer, item, dropIdx, AdvanceRndSeed(), curlv, 15, true, false);
 		TryRandomUniqueItem(item, dropIdx, curlv * 2, 15, true, false);
 		SetupItem(item);
 	}
@@ -3499,7 +3501,8 @@ void SpawnItem(Monster &monster, Point position, bool sendmsg, bool spawn /*= fa
 	} else if (sgGameInitInfo.nDifficulty == DIFF_HELL) {
 		mLevel += HellAdditionalMonsterItemLevel;
 	}
-	SetupAllItems(*MyPlayer, item, idx, AdvanceRndSeed(), mLevel, uper, onlygood, false);
+    item.dwBuff |= ((static_cast<uint32_t>(sgGameInitInfo.nDifficulty + 1)) << 6) & CF_DIFFICULTY;
+    SetupAllItems(*MyPlayer, item, idx, AdvanceRndSeed(), mLevel, uper, onlygood, false);
 	TryRandomUniqueItem(item, idx, mLevel, uper, onlygood, false);
 	SetupItem(item);
 
@@ -4453,7 +4456,8 @@ void SpawnSmith(int lvl)
 		} while (newItem._iIvalue > maxValue);
 
 		newItem._iCreateInfo = lvl | CF_SMITH;
-		newItem._iIdentified = true;
+        newItem.dwBuff |= ((static_cast<uint32_t>(sgGameInitInfo.nDifficulty + 1)) << 6) & CF_DIFFICULTY;
+        newItem._iIdentified = true;
 
 		SmithItems.push_back(newItem);
 	}
@@ -4519,6 +4523,7 @@ void SpawnWitch(int lvl)
 			item._iSeed = AdvanceRndSeed();
 			GetItemAttrs(item, PinnedItemTypes[i], 1);
 			item._iCreateInfo = lvl;
+            item.dwBuff |= ((static_cast<uint32_t>(sgGameInitInfo.nDifficulty + 1)) << 6) & CF_DIFFICULTY;
 			item._iStatFlag = true;
 			WitchItems.push_back(item);
 			continue;
@@ -4533,7 +4538,8 @@ void SpawnWitch(int lvl)
 					DiscardRandomValues(1);
 					GetItemAttrs(item, bookType, lvl);
 					item._iCreateInfo = lvl | CF_WITCH;
-					item._iIdentified = true;
+                    item.dwBuff |= ((static_cast<uint32_t>(sgGameInitInfo.nDifficulty + 1)) << 6) & CF_DIFFICULTY;
+                    item._iIdentified = true;
 					bookCount++;
 					WitchItems.push_back(item);
 					continue;
@@ -4557,7 +4563,8 @@ void SpawnWitch(int lvl)
 		} while (item._iIvalue > maxValue);
 
 		item._iCreateInfo = lvl | CF_WITCH;
-		item._iIdentified = true;
+        item.dwBuff |= ((static_cast<uint32_t>(sgGameInitInfo.nDifficulty + 1)) << 6) & CF_DIFFICULTY;
+        item._iIdentified = true;
 
 		WitchItems.push_back(item);
 	}
@@ -4677,6 +4684,7 @@ void SpawnBoy(int lvl)
 	            || BoyItem._iIvalue < ivalue)
 	        && count < 250));
 	BoyItem._iCreateInfo = lvl | CF_BOY;
+    BoyItem.dwBuff |= ((static_cast<uint32_t>(sgGameInitInfo.nDifficulty + 1)) << 6) & CF_DIFFICULTY;
 	BoyItem._iIdentified = true;
 	BoyItemLevel = lvl / 2;
 }
@@ -4702,6 +4710,7 @@ void SpawnHealer(int lvl)
 			const _item_indexes itype = RndHealerItem(*MyPlayer, lvl);
 			GetItemAttrs(item, itype, lvl);
 			item._iCreateInfo = lvl | CF_HEALER;
+            item.dwBuff |= ((static_cast<uint32_t>(sgGameInitInfo.nDifficulty + 1)) << 6) & CF_DIFFICULTY;
 			item._iIdentified = true;
 		}
 
